@@ -36,11 +36,11 @@ export async function middleware(request: NextRequest) {
                       request.nextUrl.pathname.startsWith('/signup') ||
                       request.nextUrl.pathname.startsWith('/forgot-password');
   const isResetPasswordRoute = request.nextUrl.pathname.startsWith('/reset-password');
-  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') || 
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/homepage') || 
                            request.nextUrl.pathname.startsWith('/history');
 
   if (user && (isAuthRoute || request.nextUrl.pathname === '/')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/homepage', request.url));
   }
 
   if (!user && isProtectedRoute) {

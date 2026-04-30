@@ -39,7 +39,7 @@ export const UsageStats: React.FC = () => {
           <span className="text-sm font-bold text-slate-500">Analyses used</span>
           <span className="text-lg font-bold text-slate-900">{stats.used} / {stats.limit}</span>
         </div>
-        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+        <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden shadow-inner">
           <div 
             className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-1000 shadow-lg shadow-indigo-500/20" 
             style={{ width: `${percentage}%` }}

@@ -74,7 +74,7 @@ export default function LandingPage() {
           >
             <a
               href="/signup"
-              className="w-full md:w-auto px-12 py-5 bg-slate-900 text-white font-bold text-lg rounded-2xl hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 flex items-center justify-center gap-2 group hover:-translate-y-1"
+              className="w-full md:w-auto px-12 py-5 bg-btn-primary text-white font-bold text-lg rounded-2xl hover:bg-btn-primary-hover transition-all shadow-2xl shadow-slate-200 flex items-center justify-center gap-2 group hover:-translate-y-1"
             >
               Get Started Free
               <ArrowRight
@@ -84,7 +84,7 @@ export default function LandingPage() {
             </a>
             <a
               href="/login"
-              className="w-full md:w-auto px-12 py-5 glass text-slate-900 font-bold text-lg rounded-2xl border-white/80 hover:bg-white/90 transition-all flex items-center justify-center hover:-translate-y-1"
+              className="w-full md:w-auto px-12 py-5 bg-btn-primary text-white font-bold text-lg rounded-2xl hover:bg-btn-primary-hover transition-all flex items-center justify-center hover:-translate-y-1 shadow-2xl shadow-slate-200"
             >
               Sign In
             </a>
@@ -210,7 +210,7 @@ export default function LandingPage() {
             <motion.div {...fadeInUp} className="pt-6">
               <a
                 href="/signup"
-                className="inline-flex items-center gap-3 px-12 py-6 bg-slate-900 text-white font-bold text-xl rounded-2xl hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 hover:-translate-y-1"
+                className="inline-flex items-center gap-3 px-12 py-6 bg-btn-primary text-white font-bold text-xl rounded-2xl hover:bg-btn-primary-hover transition-all shadow-2xl shadow-slate-200 hover:-translate-y-1"
               >
                 Start Styling Now
                 <ArrowRight size={24} />

@@ -54,14 +54,14 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
               onClick={() => onStyleChange(s.value)}
               className={`text-left p-5 rounded-2xl border-2 transition-all duration-300 ${
                 style === s.value
-                  ? 'border-indigo-400 bg-indigo-50/50 shadow-lg shadow-indigo-500/5 ring-4 ring-indigo-500/5'
-                  : 'border-white/40 glass hover:border-indigo-200 hover:bg-white/90'
+                  ? 'border-btn-primary bg-slate-50 shadow-lg shadow-slate-900/5 ring-4 ring-slate-900/5'
+                  : 'border-white/40 glass hover:border-slate-200 hover:bg-white/90'
               }`}
             >
-              <div className={`font-bold text-lg mb-1 ${style === s.value ? 'text-indigo-900' : 'text-slate-800'}`}>
+              <div className={`font-bold text-lg mb-1 ${style === s.value ? 'text-slate-900' : 'text-slate-800'}`}>
                 {s.label}
               </div>
-              <div className={`text-sm font-medium ${style === s.value ? 'text-indigo-600/80' : 'text-slate-500'}`}>
+              <div className={`text-sm font-medium ${style === s.value ? 'text-slate-600' : 'text-slate-500'}`}>
                 {s.desc}
               </div>
             </button>
@@ -115,7 +115,7 @@ export const AnalysisForm: React.FC<AnalysisFormProps> = ({
         className={`w-full py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all duration-500 flex items-center justify-center gap-3 ${
           disabled || isSubmitting
             ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none border border-slate-200'
-            : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-200 hover:-translate-y-1 active:scale-[0.98]'
+            : 'bg-btn-primary text-white hover:bg-btn-primary-hover shadow-slate-200 hover:-translate-y-1 active:scale-[0.98]'
         }`}
       >
         {isSubmitting ? (

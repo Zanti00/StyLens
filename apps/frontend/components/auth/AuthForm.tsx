@@ -39,7 +39,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
           password,
         });
         if (error) throw error;
-        window.location.href = "/dashboard";
+        window.location.href = "/homepage";
       } else if (mode === "forgot-password") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
