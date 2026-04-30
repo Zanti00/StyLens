@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Mail, Lock, Loader2, Sparkles, AlertCircle } from "lucide-react";
 
 interface AuthFormProps {
-  mode: "login" | "signup";
+  mode: "login" | "signup" | "forgot-password" | "reset-password";
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
@@ -33,13 +33,27 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         });
         if (error) throw error;
         setSuccess(true);
-      } else {
+      } else if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
         window.location.href = "/dashboard";
+      } else if (mode === "forgot-password") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setSuccess(true);
+      } else if (mode === "reset-password") {
+        const { error } = await supabase.auth.updateUser({
+          password,
+        });
+        if (error) throw error;
+        // Sign out after reset to ensure the user has to login with the new password
+        await supabase.auth.signOut();
+        setSuccess(true);
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during authentication");
@@ -55,33 +69,75 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
           <Mail size={40} />
         </div>
         <h2 className="text-3xl font-bold font-outfit text-gradient">
-          Check your email
+          {mode === "forgot-password"
+            ? "Link Sent"
+            : mode === "reset-password"
+              ? "Password Updated"
+              : "Check your email"}
         </h2>
         <p className="text-slate-500 text-lg">
-          We've sent a verification link to{" "}
-          <span className="font-semibold text-slate-900">{email}</span>.
+          {mode === "forgot-password"
+            ? `We've sent a password reset link to ${email}.`
+            : mode === "reset-password"
+              ? "Your password has been successfully updated. You can now log in."
+              : `We've sent a verification link to ${email}.`}
         </p>
-        <button
-          onClick={() => setSuccess(false)}
-          className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors"
+        <a
+          href="/login"
+          className="inline-block text-indigo-600 font-bold hover:text-indigo-700 transition-colors"
         >
-          Back to {mode}
-        </button>
+          Back to Login
+        </a>
       </div>
     );
   }
+
+  const getTitle = () => {
+    switch (mode) {
+      case "login":
+        return "Welcome back";
+      case "signup":
+        return "Join StyLens";
+      case "forgot-password":
+        return "Reset Password";
+      case "reset-password":
+        return "New Password";
+    }
+  };
+
+  const getSubtitle = () => {
+    switch (mode) {
+      case "login":
+        return "Sign in to access your personal stylist";
+      case "signup":
+        return "Start your journey to better style today";
+      case "forgot-password":
+        return "Enter your email to receive a reset link";
+      case "reset-password":
+        return "Enter your new secure password";
+    }
+  };
+
+  const getButtonText = () => {
+    switch (mode) {
+      case "login":
+        return "Sign In";
+      case "signup":
+        return "Create Account";
+      case "forgot-password":
+        return "Send Reset Link";
+      case "reset-password":
+        return "Update Password";
+    }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto space-y-8 glass-card p-8 md:p-12">
       <div className="text-center space-y-2">
         <h1 className="text-4xl font-bold font-outfit tracking-tight text-gradient">
-          {mode === "login" ? "Welcome back" : "Join StyLens"}
+          {getTitle()}
         </h1>
-        <p className="text-slate-500 font-medium">
-          {mode === "login"
-            ? "Sign in to access your personal stylist"
-            : "Start your journey to better style today"}
-        </p>
+        <p className="text-slate-500 font-medium">{getSubtitle()}</p>
       </div>
 
       <form onSubmit={handleAuth} className="space-y-6">
@@ -93,45 +149,61 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         )}
 
         <div className="space-y-4">
-          <div className="relative">
-            <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">
-              Email Address
-            </label>
+          {mode !== "reset-password" && (
             <div className="relative">
-              <Mail
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 z-10"
-                size={18}
-              />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="glass-input w-full pl-12"
-              />
+              <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 z-10"
+                  size={18}
+                />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="glass-input w-full pl-12"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="relative">
-            <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">
-              Password
-            </label>
+          {mode !== "forgot-password" && (
             <div className="relative">
-              <Lock
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 z-10"
-                size={18}
-              />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="glass-input w-full pl-12"
-              />
+              <div className="flex justify-between items-center ml-1 mb-1.5">
+                <label className="text-sm font-semibold text-slate-700 block">
+                  {mode === "reset-password" ? "New Password" : "Password"}
+                </label>
+              </div>
+              <div className="relative">
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 z-10"
+                  size={18}
+                />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="glass-input w-full pl-12"
+                />
+              </div>
+              {mode === "login" && (
+                <div className="text-right mt-1.5">
+                  <a
+                    href="/forgot-password"
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                  >
+                    Forgot Password?
+                  </a>
+                </div>
+              )}
             </div>
-          </div>
+          )}
         </div>
 
         <button
@@ -143,26 +215,39 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
             <Loader2 size={20} className="animate-spin" />
           ) : (
             <>
-              {mode === "login" ? "Sign In" : "Create Account"}
+              {getButtonText()}
               <Sparkles size={18} />
             </>
           )}
         </button>
       </form>
 
-      <div className="text-center text-sm font-medium pt-2">
-        <span className="text-slate-500">
-          {mode === "login"
-            ? "Don't have an account?"
-            : "Already have an account?"}
-        </span>{" "}
-        <a
-          href={mode === "login" ? "/signup" : "/login"}
-          className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors"
-        >
-          {mode === "login" ? "Sign up" : "Sign in"}
-        </a>
-      </div>
+      {mode !== "forgot-password" && mode !== "reset-password" && (
+        <div className="text-center text-sm font-medium pt-2">
+          <span className="text-slate-500">
+            {mode === "login"
+              ? "Don't have an account?"
+              : "Already have an account?"}
+          </span>{" "}
+          <a
+            href={mode === "login" ? "/signup" : "/login"}
+            className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors"
+          >
+            {mode === "login" ? "Sign up" : "Sign in"}
+          </a>
+        </div>
+      )}
+
+      {(mode === "forgot-password" || mode === "reset-password") && (
+        <div className="text-center text-sm font-medium pt-2">
+          <a
+            href="/login"
+            className="text-indigo-600 font-bold hover:text-indigo-700 transition-colors"
+          >
+            Back to Login
+          </a>
+        </div>
+      )}
     </div>
   );
 };
