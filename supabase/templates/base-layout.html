@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StyLens</title>
+    <style>
+        /* Base Styles */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f8fafc;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #f8fafc;
+            padding-bottom: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 24px;
+            overflow: hidden;
+            margin-top: 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        
+        /* Header */
+        .header {
+            padding: 40px 40px 20px 40px;
+            text-align: center;
+        }
+        .logo {
+            display: inline-block;
+            width: 48px;
+            height: 48px;
+            background-color: #0f172a;
+            border-radius: 12px;
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 48px;
+            text-align: center;
+            text-decoration: none;
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+        }
+        .brand-name {
+            display: block;
+            margin-top: 12px;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            color: #0f172a;
+        }
+
+        /* Content */
+        .content {
+            padding: 20px 40px 40px 40px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            margin-bottom: 16px;
+            color: #0f172a;
+        }
+        p {
+            font-size: 16px;
+            line-height: 24px;
+            color: #475569;
+            margin-bottom: 24px;
+        }
+
+        /* Button */
+        .button-container {
+            padding: 20px 0;
+            text-align: center;
+        }
+        .button {
+            display: inline-block;
+            background-color: #0f172a;
+            color: #ffffff !important;
+            padding: 16px 32px;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 16px;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 40px;
+            text-align: center;
+        }
+        .footer-text {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 20px;
+        }
+        .footer-links {
+            margin-top: 16px;
+        }
+        .footer-link {
+            color: #64748b;
+            text-decoration: none;
+            margin: 0 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <div class="logo">S</div>
+                <span class="brand-name">StyLens</span>
+            </div>
+            
+            <div class="content">
+                {{ .Content }}
+            </div>
+            
+            <div class="footer">
+                <p class="footer-text">
+                    © 2026 StyLens. Crafted for style.<br>
+                    You received this email because you signed up for StyLens.
+                </p>
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Privacy</a>
+                    <a href="#" class="footer-link">Terms</a>
+                    <a href="#" class="footer-link">Contact</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
