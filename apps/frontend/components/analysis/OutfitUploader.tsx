@@ -89,10 +89,10 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
         onDrop={onDrop}
         className={`relative group rounded-[2rem] transition-all duration-500 min-h-[360px] flex flex-col items-center justify-center p-8 ${
           isDragging
-            ? "border-indigo-400 bg-indigo-50/30 backdrop-blur-md"
+            ? "border-slate-900 bg-slate-50/30 backdrop-blur-md"
             : preview
               ? " bg-emerald-50/10 cursor-default"
-              : "border-white/20 glass hover:border-indigo-300 hover:bg-white/80 cursor-pointer"
+              : "border-white/20 glass hover:border-slate-900 hover:bg-white/80 cursor-pointer"
         }`}
         onClick={() => !preview && fileInputRef.current?.click()}
       >
@@ -168,7 +168,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 {/* Left Side: Image Preview */}
                 <div className="w-full md:w-2/5 md:sticky md:top-8">
                   <div
-                    className="relative aspect-[3/4] w-full rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/20 group/preview cursor-zoom-in"
+                    className="relative aspect-[3/4] w-full rounded-[2.5rem] overflow-hidden shadow-2xl  group/preview cursor-zoom-in"
                     onClick={() => setIsMaximized(true)}
                   >
                     <img
@@ -188,9 +188,9 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 <div className="w-full md:w-3/5 space-y-6">
                   {/* Row 1: Numeric Rating */}
                   <div className="glass rounded-[2rem] p-8 flex flex-col items-center justify-center text-center space-y-4 border border-white/40 shadow-xl relative overflow-hidden group/rating">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover/rating:bg-indigo-500/20 transition-colors" />
-                    <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 mb-2">
-                      <Star size={32} className="fill-indigo-600" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-900/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover/rating:bg-slate-900/20 transition-colors" />
+                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-900 mb-2">
+                      <Star size={32} className="fill-slate-900" />
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-slate-500 font-bold uppercase tracking-widest text-xs">
@@ -321,7 +321,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
           </AnimatePresence>
         ) : (
           <div className="text-center flex flex-col items-center space-y-6">
-            <div className="w-20 h-20 glass rounded-3xl text-indigo-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500 group-hover:shadow-indigo-500/10">
+            <div className="w-20 h-20 glass rounded-3xl text-slate-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-all duration-500 group-hover:shadow-slate-900/10">
               <Upload size={36} />
             </div>
             <div className="space-y-2">
@@ -351,7 +351,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-slate-950/20 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-slate-950/50 backdrop-blur-sm"
             onClick={() => setIsMaximized(false)}
           >
             <motion.div
@@ -365,7 +365,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
               <img
                 src={preview}
                 alt="Maximized Outfit Preview"
-                className="max-w-full max-h-full object-contain rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+                className="max-w-full max-h-full object-contain rounded-2xl "
               />
 
               <div className="absolute top-0 right-0 md:-top-2 md:-right-2 flex gap-3">
