@@ -24,10 +24,14 @@ interface OutfitUploaderProps {
 export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   onFileSelect,
 }) => {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [randomCategories, setRandomCategories] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Close on Escape key
@@ -41,6 +45,11 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
 
   const handleFileChange = (file: File) => {
     if (file && file.type.startsWith("image/")) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File is too large. Maximum size is 2MB.");
+        return;
+      }
+      setSelectedFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result as string);
@@ -74,11 +83,44 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   };
 
   const clearFile = () => {
+    setSelectedFile(null);
     setPreview(null);
     onFileSelect(null);
     setIsMaximized(false);
     setShowAnalysis(false);
+    setResult(null);
+    setRandomCategories([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleGenerateAnalysis = async () => {
+    if (!selectedFile) return;
+
+    setIsAnalyzing(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      // We need to import analysisApi, let's assume it's available or add it
+      const { analysisApi } = await import("@/lib/api");
+      const response = await analysisApi.upload(formData);
+
+      if (response.success) {
+        setResult(response.data);
+        
+        // Use style_preference from backend if available
+        if (response.data.style_preference) {
+          setRandomCategories(response.data.style_preference);
+        }
+        
+        setShowAnalysis(true);
+      }
+    } catch (error) {
+      console.error("Analysis failed:", error);
+      alert("Failed to analyze outfit. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -146,15 +188,25 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowAnalysis(true);
+                    handleGenerateAnalysis();
                   }}
-                  className="flex items-center gap-2.5 bg-btn-primary hover:bg-btn-primary-hover text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-slate-900/20 transition-all hover:scale-105 active:scale-95 group"
+                  disabled={isAnalyzing}
+                  className="flex items-center gap-2.5 bg-btn-primary hover:bg-btn-primary-hover text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-slate-900/20 transition-all hover:scale-105 active:scale-95 group disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <Sparkles
-                    size={22}
-                    className="group-hover:rotate-12 transition-transform"
-                  />
-                  <span>Generate Analysis</span>
+                  {isAnalyzing ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Analyzing...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Sparkles
+                        size={22}
+                        className="group-hover:rotate-12 transition-transform"
+                      />
+                      <span>Generate Analysis</span>
+                    </>
+                  )}
                 </button>
               </motion.div>
             ) : (
@@ -168,7 +220,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 {/* Left Side: Image Preview */}
                 <div className="w-full md:w-2/5 md:sticky md:top-8">
                   <div
-                    className="relative aspect-[3/4] w-full rounded-[2.5rem] overflow-hidden shadow-2xl  group/preview cursor-zoom-in"
+                    className="relative aspect-[3/4] w-full rounded-[2.5rem] overflow-hidden shadow-2xl group/preview cursor-zoom-in"
                     onClick={() => setIsMaximized(true)}
                   >
                     <img
@@ -176,6 +228,21 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       alt="Outfit Preview"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover/preview:scale-105"
                     />
+
+                    {/* Style Categories Tags Overlay */}
+                    {randomCategories.length > 0 && (
+                      <div className="absolute bottom-6 left-6 flex flex-wrap gap-2 z-10">
+                        {randomCategories.map((cat, i) => (
+                          <span
+                            key={i}
+                            className="text-[0.75rem] px-3 py-1 bg-indigo-50 backdrop-blur-md text-indigo-600 font-bold uppercase tracking-wider rounded-xl shadow-lg border border-white/20"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="absolute inset-0 bg-slate-900/0 group-hover/preview:bg-slate-900/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover/preview:opacity-100">
                       <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shadow-2xl transform scale-90 group-hover/preview:scale-100 transition-all duration-300">
                         <Maximize2 size={24} />
@@ -198,7 +265,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       </h4>
                       <div className="flex items-baseline justify-center gap-1">
                         <span className="text-6xl font-black font-outfit text-slate-900">
-                          8.5
+                          {result?.rating || "0"}
                         </span>
                         <span className="text-2xl font-bold text-slate-400">
                           /10
@@ -206,8 +273,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       </div>
                     </div>
                     <p className="text-slate-600 font-medium max-w-sm">
-                      Your outfit shows a strong sense of modern minimalism with
-                      a great balance of textures.
+                      {result?.overall_summary || "Analysis pending..."}
                     </p>
                   </div>
 
@@ -225,13 +291,12 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       </div>
                       <div className="space-y-3">
                         <div className="flex gap-2">
-                          {[
-                            "#1e293b",
-                            "#64748b",
-                            "#cbd5e1",
-                            "#f8fafc",
-                            "#f43f5e",
-                          ].map((color) => (
+                          {(
+                            result?.color_analysis?.hex_codes || [
+                              "#cbd5e1",
+                              "#94a3b8",
+                            ]
+                          ).map((color: string) => (
                             <div
                               key={color}
                               className="w-8 h-8 rounded-full border border-slate-200"
@@ -240,8 +305,8 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                           ))}
                         </div>
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          Excellent use of neutral tones with a subtle pop of
-                          rose for visual interest.
+                          {result?.color_analysis?.verdict ||
+                            "Color analysis pending..."}
                         </p>
                       </div>
                     </div>
@@ -258,8 +323,8 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       </div>
                       <div className="space-y-2">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                          The silhouette is well-defined. The cropped jacket
-                          perfectly complements the high-waisted trousers.
+                          {result?.fit_proportion_analysis ||
+                            "Fit analysis pending..."}
                         </p>
                         <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
                           <div className="h-full w-[90%] bg-emerald-500 rounded-full" />
@@ -279,19 +344,17 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       </h4>
                     </div>
                     <ul className="space-y-3">
-                      {[
-                        "Try adding a silver necklace to enhance the cool tones.",
-                        "Roll up the sleeves slightly for a more relaxed, effortless vibe.",
-                        "The footwear choice is solid, but white sneakers would make this more casual.",
-                      ].map((tip, i) => (
-                        <li
-                          key={i}
-                          className="flex gap-3 text-sm text-slate-600"
-                        >
-                          <span className="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 shrink-0" />
-                          {tip}
-                        </li>
-                      ))}
+                      {(result?.style_notes_tips || ["Awaiting tips..."]).map(
+                        (tip: string, i: number) => (
+                          <li
+                            key={i}
+                            className="flex gap-3 text-sm text-slate-600"
+                          >
+                            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full mt-1.5 shrink-0" />
+                            {tip}
+                          </li>
+                        ),
+                      )}
                     </ul>
                   </div>
 
@@ -338,7 +401,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 <ImageIcon size={14} /> JPG, PNG, JPEG
               </span>
               <span>•</span>
-              <span>Max 10MB</span>
+              <span>Max 2MB</span>
             </div>
           </div>
         )}

@@ -3,26 +3,23 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 
-class StylePreference(str, Enum):
-    CASUAL = "CASUAL"
-    FORMAL = "FORMAL"
-    STREETWEAR = "STREETWEAR"
-    BUSINESS_CASUAL = "BUSINESS_CASUAL"
-    ATHLEISURE = "ATHLEISURE"
-
 class AnalysisBase(BaseModel):
-    style_preference: StylePreference
     weather_location: Optional[str] = None
     user_weather_input: Optional[str] = None # User specified weather
 
 class AnalysisCreate(AnalysisBase):
     pass
 
+class ColorAnalysis(BaseModel):
+    hex_codes: List[str]
+    verdict: str
+
 class AnalysisResult(BaseModel):
     id: str
-    rating: Optional[int] = None
-    color_feedback: Optional[str] = None
-    styling_tips: List[str] = []
+    rating: Optional[float] = None
+    color_analysis: Optional[ColorAnalysis] = None
+    fit_proportion_analysis: Optional[str] = None
+    style_notes_tips: List[str] = []
     overall_summary: Optional[str] = None
     image_url: str
     weather_context: Optional[dict] = None

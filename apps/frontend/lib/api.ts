@@ -20,8 +20,13 @@ export async function fetchWithAuth(path: string, options: RequestInit = {}) {
 
   const data = await response.json();
 
+  if (response.status === 401) {
+    throw new Error(data.detail || 'Unauthorized');
+  }
+
   if (!response.ok) {
-    throw new Error(data.error?.message || 'API request failed');
+    const errorMessage = data.error?.message || data.detail || 'API request failed';
+    throw new Error(`${errorMessage} (${response.status})`);
   }
 
   return data;

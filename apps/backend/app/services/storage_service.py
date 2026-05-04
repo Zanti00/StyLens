@@ -7,7 +7,7 @@ from supabase import create_client, Client
 class StorageService:
     def __init__(self):
         self.supabase: Client = create_client(settings.supabase_url, settings.supabase_service_role_key)
-        self.bucket_name = "outfit-images"
+        self.bucket_name = "closet"
 
     async def upload_image(self, file: UploadFile, user_id: str) -> dict:
         """
@@ -15,8 +15,8 @@ class StorageService:
         """
         # 1. Validate File Size (Max 10MB)
         file_content = await file.read()
-        if len(file_content) > 10 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+        if len(file_content) > 2 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File too large (max 2MB)")
 
         # 2. Validate MIME Type via Magic Bytes
         mime_type = magic.from_buffer(file_content, mime=True)
