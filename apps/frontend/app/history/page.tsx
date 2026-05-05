@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { 
-  Sparkles, 
+import React from "react";
+import {
+  Sparkles,
   History as HistoryIcon,
   Search,
   SlidersHorizontal,
@@ -11,15 +11,17 @@ import {
   SortAsc,
   SortDesc,
   Tag,
-  Star
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { AnalysisHistory } from '@/components/analysis/AnalysisHistory';
+  Star,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { AnalysisHistory } from "@/components/analysis/AnalysisHistory";
 
 export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [isSortOpen, setIsSortOpen] = React.useState(false);
-  const [sortBy, setSortBy] = React.useState<"date" | "category" | "rating">("date");
+  const [sortBy, setSortBy] = React.useState<"date" | "category" | "rating">(
+    "date",
+  );
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
   const [hasUserSorted, setHasUserSorted] = React.useState(false);
   const sortDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -55,15 +57,12 @@ export default function HistoryPage() {
     <div className="max-w-7xl mx-auto px-4 py-12 md:py-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
         <div className="space-y-4 text-center md:text-left">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-slate-600 text-sm font-bold tracking-wide uppercase">
-            <HistoryIcon size={16} />
-            <span>Style Archive</span>
-          </div>
           <h1 className="text-4xl md:text-5xl font-bold font-outfit text-slate-900 tracking-tight">
             Analysis History
           </h1>
           <p className="text-lg text-slate-500 max-w-xl">
-            Track your style evolution and revisit previous outfit recommendations.
+            Track your style evolution and revisit previous outfit
+            recommendations.
           </p>
         </div>
       </div>
@@ -209,8 +208,8 @@ export default function HistoryPage() {
               </motion.div>
             )}
           </div>
-          
-          <a 
+
+          <a
             href="/"
             className="flex-1 md:flex-none flex items-center justify-center gap-2.5 px-7 py-3.5 bg-indigo-600 text-white font-bold rounded-2xl border border-white/50 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group"
           >
@@ -220,7 +219,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <AnalysisHistory 
+      <AnalysisHistory
         searchQuery={searchQuery}
         sortBy={sortBy}
         sortOrder={sortOrder}

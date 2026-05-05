@@ -96,7 +96,9 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
           folder.description
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          folder.aesthetic.some(a => a.toLowerCase().includes(searchQuery.toLowerCase())),
+          folder.aesthetic.some((a) =>
+            a.toLowerCase().includes(searchQuery.toLowerCase()),
+          ),
       );
     }
 
@@ -129,13 +131,18 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
           val = JSON.parse(val);
         }
         // If it's an array with one element that is a string starting with "[", parse that too
-        if (Array.isArray(val) && val.length === 1 && typeof val[0] === "string" && val[0].startsWith("[")) {
+        if (
+          Array.isArray(val) &&
+          val.length === 1 &&
+          typeof val[0] === "string" &&
+          val[0].startsWith("[")
+        ) {
           val = JSON.parse(val[0]);
         }
       } catch (e) {
         console.error("Failed to parse aesthetic:", e);
       }
-      
+
       if (Array.isArray(val)) return val;
       return val ? [val] : [];
     })(),
@@ -222,7 +229,7 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto px-4 py-16 sm:px-6 lg:px-44">
       {/* Page Header */}
       <div className="flex flex-col gap-10 mb-16">
         <motion.div
@@ -438,7 +445,7 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
       </div>
 
       {/* Folders Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10 px-20">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
         {isLoading ? (
           // Loading Skeletons
           [...Array(3)].map((_, i) => (
@@ -510,7 +517,10 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
                   </h3>
                   <div className="flex flex-wrap gap-1.5 leading-relaxed">
                     {folder.aesthetic.map((tag, i) => (
-                      <span key={i} className="text-[0.8rem] px-2 py-0.5 bg-indigo-50 text-indigo-500 font-bold uppercase tracking-wider rounded-md">
+                      <span
+                        key={i}
+                        className="text-[0.8rem] px-2 py-0.5 bg-indigo-50 text-indigo-500 font-bold uppercase tracking-wider rounded-md"
+                      >
                         {tag}
                       </span>
                     ))}

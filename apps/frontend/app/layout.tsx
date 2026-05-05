@@ -5,10 +5,8 @@ import { getAuthenticatedUser } from "@/services/auth.service";
 import {
   LogOut,
   User as UserIcon,
-  LayoutDashboard,
-  History,
-  Shirt,
 } from "lucide-react";
+import { Navigation } from "@/components/layout/Navigation";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -52,40 +50,7 @@ export default async function RootLayout({
             </div>
 
             <div className="flex justify-center">
-              {user && (
-                <div className="hidden md:flex items-center gap-8">
-                  <a
-                    href="/homepage"
-                    className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2 group"
-                  >
-                    <LayoutDashboard
-                      size={18}
-                      className="group-hover:text-slate-900 transition-colors"
-                    />
-                    Homepage
-                  </a>
-                  <a
-                    href="/closet"
-                    className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2 group"
-                  >
-                    <Shirt
-                      size={18}
-                      className="group-hover:text-slate-900 transition-colors"
-                    />
-                    Closet
-                  </a>
-                  <a
-                    href="/history"
-                    className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-all flex items-center gap-2 group"
-                  >
-                    <History
-                      size={18}
-                      className="group-hover:text-slate-900 transition-colors"
-                    />
-                    History
-                  </a>
-                </div>
-              )}
+              {user && <Navigation />}
             </div>
 
             <div className="flex justify-end items-center gap-4 md:gap-10">

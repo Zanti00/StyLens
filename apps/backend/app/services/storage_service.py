@@ -57,6 +57,18 @@ class StorageService:
             # Fallback or error handling
             return ""
 
+    def get_signed_urls(self, file_paths: list[str], expires_in: int = 3600) -> list[dict]:
+        """
+        Generates multiple short-lived signed URLs at once.
+        """
+        if not file_paths:
+            return []
+        try:
+            return self.supabase.storage.from_(self.bucket_name).create_signed_urls(file_paths, expires_in)
+        except Exception as e:
+            # Fallback to empty list or log error
+            return []
+
     async def delete_image(self, file_path: str):
         """
         Deletes an image from storage.

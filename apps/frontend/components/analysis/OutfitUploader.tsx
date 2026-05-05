@@ -24,8 +24,9 @@ interface OutfitUploaderProps {
 export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   onFileSelect,
 }) => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showAnalysis, setShowAnalysis] = useState(false);
@@ -43,25 +44,56 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
-  const handleFileChange = (file: File) => {
-    if (file && file.type.startsWith("image/")) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("File is too large. Maximum size is 2MB.");
-        return;
+  const handleFilesChange = (newFiles: FileList | File[]) => {
+    const filesArray = Array.from(newFiles);
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    // Filter and limit to 5 total images
+    const remainingSlots = 5 - selectedFiles.length;
+    if (remainingSlots <= 0) {
+      alert("You can only upload up to 5 images.");
+      return;
+    }
+
+    const filesToProcess = filesArray.slice(0, remainingSlots);
+
+    filesToProcess.forEach((file) => {
+      if (file.type.startsWith("image/")) {
+        if (file.size > 2 * 1024 * 1024) {
+          alert(`${file.name} is too large. Maximum size is 2MB.`);
+          return;
+        }
+        validFiles.push(file);
       }
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-      onFileSelect(file);
+    });
+
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
+      
+      const readers = validFiles.map((file) => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+      });
+
+      Promise.all(readers).then((results) => {
+        setPreviews((prev) => [...prev, ...results]);
+        // Set the first newly added image as active if none were selected before
+        if (selectedFiles.length === 0) {
+          setActiveIndex(0);
+        }
+      });
+
+      onFileSelect(validFiles[0]); // For backward compatibility with prop
     }
   };
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileChange(e.target.files[0]);
+    if (e.target.files) {
+      handleFilesChange(e.target.files);
     }
   };
 
@@ -77,14 +109,43 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files) {
+      handleFilesChange(e.dataTransfer.files);
     }
   };
 
-  const clearFile = () => {
-    setSelectedFile(null);
-    setPreview(null);
+  const removeFile = (index: number) => {
+    const newFiles = [...selectedFiles];
+    const newPreviews = [...previews];
+    newFiles.splice(index, 1);
+    newPreviews.splice(index, 1);
+    setSelectedFiles(newFiles);
+    setPreviews(newPreviews);
+    
+    // Adjust active index
+    if (activeIndex >= newFiles.length && newFiles.length > 0) {
+      setActiveIndex(newFiles.length - 1);
+    } else if (newFiles.length === 0) {
+      setActiveIndex(0);
+      onFileSelect(null);
+    }
+  };
+
+  const swapWithMain = (index: number) => {
+    if (index === 0) return;
+    const newFiles = [...selectedFiles];
+    const newPreviews = [...previews];
+    [newFiles[0], newFiles[index]] = [newFiles[index], newFiles[0]];
+    [newPreviews[0], newPreviews[index]] = [newPreviews[index], newPreviews[0]];
+    setSelectedFiles(newFiles);
+    setPreviews(newPreviews);
+    setActiveIndex(0);
+  };
+
+  const clearFiles = () => {
+    setSelectedFiles([]);
+    setPreviews([]);
+    setActiveIndex(0);
     onFileSelect(null);
     setIsMaximized(false);
     setShowAnalysis(false);
@@ -94,25 +155,26 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   };
 
   const handleGenerateAnalysis = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     setIsAnalyzing(true);
     try {
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      // For now, we'll send all selected files if the backend supports it, 
+      // otherwise we might need to adjust this.
+      // Add all selected files to the form data
+      selectedFiles.forEach((file) => {
+        formData.append("files", file);
+      });
 
-      // We need to import analysisApi, let's assume it's available or add it
       const { analysisApi } = await import("@/lib/api");
       const response = await analysisApi.upload(formData);
 
       if (response.success) {
         setResult(response.data);
-        
-        // Use style_preference from backend if available
         if (response.data.style_preference) {
           setRandomCategories(response.data.style_preference);
         }
-        
         setShowAnalysis(true);
       }
     } catch (error) {
@@ -132,21 +194,22 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
         className={`relative group rounded-[2rem] transition-all duration-500 min-h-[360px] flex flex-col items-center justify-center p-8 ${
           isDragging
             ? "border-slate-900 bg-slate-50/30 backdrop-blur-md"
-            : preview
+            : previews.length > 0
               ? " bg-emerald-50/10 cursor-default"
               : "border-white/20 glass hover:border-slate-900 hover:bg-white/80 cursor-pointer"
         }`}
-        onClick={() => !preview && fileInputRef.current?.click()}
+        onClick={() => previews.length === 0 && fileInputRef.current?.click()}
       >
         <input
           type="file"
           ref={fileInputRef}
           onChange={onInputChange}
           accept="image/*"
+          multiple
           className="hidden"
         />
 
-        {preview ? (
+        {previews.length > 0 ? (
           <AnimatePresence mode="wait">
             {!showAnalysis ? (
               <motion.div
@@ -161,7 +224,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                   onClick={() => setIsMaximized(true)}
                 >
                   <img
-                    src={preview}
+                    src={previews[0]}
                     alt="Preview"
                     className="w-full h-full object-cover transition-transform duration-700"
                   />
@@ -176,13 +239,54 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      clearFile();
+                      removeFile(0);
                     }}
                     className="absolute top-4 right-4 p-2.5 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl hover:bg-red-500 transition-all shadow-xl z-10"
                     title="Remove photo"
                   >
                     <X size={20} />
                   </button>
+                </div>
+
+                {/* Thumbnail Gallery - Exactly 4 slots at the bottom */}
+                <div className="flex flex-wrap gap-3 mb-8 justify-center">
+                  {/* Existing secondary images (slots 2-5) */}
+                  {previews.slice(1).map((src, index) => (
+                    <div
+                      key={index + 1}
+                      className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 group/thumbnail"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        swapWithMain(index + 1);
+                      }}
+                    >
+                      <img src={src} className="w-full h-full object-cover" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFile(index + 1);
+                        }}
+                        className="absolute top-0.5 right-0.5 p-0.5 bg-slate-900/80 text-white rounded-lg hover:bg-red-500 transition-colors opacity-0 group-hover/thumbnail:opacity-100"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {/* Empty slots (Add buttons) to fill the 4 slots */}
+                  {Array.from({ length: 4 - (previews.length - 1) }).map((_, i) => (
+                    <button
+                      key={`add-${i}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-slate-900 hover:text-slate-900 transition-all bg-white/50"
+                    >
+                      <Upload size={16} />
+                      <span className="text-[10px] font-bold mt-1">Add</span>
+                    </button>
+                  ))}
                 </div>
 
                 <button
@@ -224,7 +328,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                     onClick={() => setIsMaximized(true)}
                   >
                     <img
-                      src={preview}
+                      src={previews[0]}
                       alt="Outfit Preview"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover/preview:scale-105"
                     />
@@ -249,6 +353,28 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       </div>
                     </div>
                   </div>
+
+                  {/* Auxiliary Images Gallery (Analysis View) */}
+                  {previews.length > 1 && (
+                    <div className="flex flex-wrap gap-3 mt-6 justify-center">
+                      {previews.slice(1).map((src, index) => (
+                        <div
+                          key={index + 1}
+                          className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            swapWithMain(index + 1);
+                          }}
+                        >
+                          <img
+                            src={src}
+                            alt={`Outfit auxiliary ${index + 2}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Side: Analysis Grid */}
@@ -409,7 +535,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
 
       {/* Maximized Modal */}
       <AnimatePresence>
-        {isMaximized && preview && (
+        {isMaximized && previews.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -426,7 +552,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <img
-                src={preview}
+                src={previews[0]}
                 alt="Maximized Outfit Preview"
                 className="max-w-full max-h-full object-contain rounded-2xl "
               />

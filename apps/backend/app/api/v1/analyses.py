@@ -22,15 +22,24 @@ router = APIRouter()
 
 @router.post("/", response_model=ApiResponse)
 async def create_analysis(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     weather_location: Optional[str] = Form(None),
     user_weather_input: Optional[str] = Form(None),
     user: dict = Depends(get_current_user)
 ):
     import random
     
-    # 1. Upload Image
-    upload_result = await storage_service.upload_image(file, user["id"])
+    # 1. Upload Images
+    upload_results = []
+    for file in files:
+        res = await storage_service.upload_image(file, user["id"])
+        upload_results.append(res)
+    
+    if not upload_results:
+        raise HTTPException(status_code=400, detail="At least one image is required")
+        
+    primary_image = upload_results[0]
+    auxiliary_paths = [res["path"] for res in upload_results[1:]]
     
     # 2. Get Weather Context (Optional)
     weather_context = None
@@ -42,8 +51,6 @@ async def create_analysis(
             weather_context["source"] = "api"
 
     # 3. Placeholder for AI Analysis (Skipped per user request)
-    # result = await llm_service.analyze_outfit(...)
-    
     # Pick random categories
     random_styles = random.sample(STYLE_CATEGORIES, k=random.randint(2, 3))
     
@@ -51,8 +58,9 @@ async def create_analysis(
     analysis_data = {
         "user_id": user["id"],
         "title": f"{random.choice(['Daily', 'Street', 'Evening', 'Work', 'Weekend'])} Outfit Analysis",
-        "image_url": upload_result["url"],
-        "image_path": upload_result["path"],
+        "image_url": primary_image["url"],
+        "image_path": primary_image["path"],
+        "auxiliary_image_paths": auxiliary_paths,
         "weather_context": weather_context,
         "rating": 7.0,
         "overall_summary": "it is good",
@@ -72,6 +80,11 @@ async def create_analysis(
     # 4. Save to DB
     saved_record = await analysis_repo.create_analysis(analysis_data)
     
+    # Include all signed URLs in the response
+    all_paths = [saved_record["image_path"]] + (saved_record.get("auxiliary_image_paths") or [])
+    signed_urls = storage_service.get_signed_urls(all_paths)
+    saved_record["image_urls"] = [res["signedURL"] for res in signed_urls if "signedURL" in res]
+    
     return {
         "success": True,
         "data": saved_record,
@@ -85,6 +98,35 @@ async def get_history(
     user: dict = Depends(get_current_user)
 ):
     history = await analysis_repo.get_user_analyses(user["id"], limit, offset)
+    
+    # Refresh signed URLs for all images
+    all_image_paths = []
+    for item in history:
+        if item.get("image_path"):
+            all_image_paths.append(item["image_path"])
+        if item.get("auxiliary_image_paths"):
+            all_image_paths.extend(item["auxiliary_image_paths"])
+            
+    if all_image_paths:
+        signed_urls = storage_service.get_signed_urls(all_image_paths)
+        url_map = {res["path"]: res["signedURL"] for res in signed_urls if "signedURL" in res}
+        
+        for item in history:
+            item_urls = []
+            # Primary image
+            path = item.get("image_path")
+            if path in url_map:
+                item["image_url"] = url_map[path]
+                item_urls.append(url_map[path])
+            
+            # Auxiliary images
+            aux_paths = item.get("auxiliary_image_paths") or []
+            for aux_path in aux_paths:
+                if aux_path in url_map:
+                    item_urls.append(url_map[aux_path])
+            
+            item["image_urls"] = item_urls
+
     return {
         "success": True,
         "data": {"items": history},
@@ -100,6 +142,20 @@ async def get_analysis(
     if not record:
         raise HTTPException(status_code=404, detail="Analysis not found")
         
+    # Refresh signed URLs
+    all_paths = []
+    if record.get("image_path"):
+        all_paths.append(record["image_path"])
+    if record.get("auxiliary_image_paths"):
+        all_paths.extend(record["auxiliary_image_paths"])
+        
+    if all_paths:
+        signed_urls = storage_service.get_signed_urls(all_paths)
+        urls = [res["signedURL"] for res in signed_urls if "signedURL" in res]
+        record["image_urls"] = urls
+        if urls:
+            record["image_url"] = urls[0]
+
     return {
         "success": True,
         "data": record,
