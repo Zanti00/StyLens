@@ -50,6 +50,7 @@ async def create_analysis(
     # Dummy result for now - Temporary mock for faster UX feedback
     analysis_data = {
         "user_id": user["id"],
+        "title": f"{random.choice(['Daily', 'Street', 'Evening', 'Work', 'Weekend'])} Outfit Analysis",
         "image_url": upload_result["url"],
         "image_path": upload_result["path"],
         "weather_context": weather_context,

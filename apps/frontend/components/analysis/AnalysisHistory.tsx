@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { analysisApi } from '@/lib/api';
-import { Calendar, Star, Trash2, ExternalLink, ArrowRight } from 'lucide-react';
+import { Calendar, Star, Trash2, ExternalLink, ArrowRight, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // --- Sub-components ---
@@ -91,7 +91,7 @@ const HistoryCard: React.FC<{ item: any; index: number }> = ({ item, index }) =>
   >
     <HistoryImage src={item.image_url} />
     <HistoryContent 
-      title="Style Analysis" 
+      title={item.title || "Style Analysis"} 
       analysis={item.overall_summary} 
       date={item.created_at}
       preference={item.style_preference}
@@ -102,7 +102,17 @@ const HistoryCard: React.FC<{ item: any; index: number }> = ({ item, index }) =>
 
 // --- Main Component ---
 
-export const AnalysisHistory: React.FC = () => {
+interface AnalysisHistoryProps {
+  searchQuery?: string;
+  sortBy?: "date" | "category" | "rating";
+  sortOrder?: "asc" | "desc";
+}
+
+export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
+  searchQuery = "",
+  sortBy = "date",
+  sortOrder = "desc"
+}) => {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +133,39 @@ export const AnalysisHistory: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const processedItems = React.useMemo(() => {
+    let result = [...items];
+
+    // Filter by search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (item) =>
+          (item.title && item.title.toLowerCase().includes(query)) ||
+          (Array.isArray(item.style_preference) && 
+            item.style_preference.some((s: string) => s.toLowerCase().includes(query))) ||
+          (typeof item.style_preference === 'string' && item.style_preference.toLowerCase().includes(query))
+      );
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === "date") {
+        comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (sortBy === "category") {
+        const catA = Array.isArray(a.style_preference) ? (a.style_preference[0] || "") : (a.style_preference || "");
+        const catB = Array.isArray(b.style_preference) ? (b.style_preference[0] || "") : (b.style_preference || "");
+        comparison = catA.localeCompare(catB);
+      } else if (sortBy === "rating") {
+        comparison = (Number(a.rating) || 0) - (Number(b.rating) || 0);
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    return result;
+  }, [items, searchQuery, sortBy, sortOrder]);
 
   if (loading) {
     return (
@@ -180,10 +223,28 @@ export const AnalysisHistory: React.FC = () => {
     );
   }
 
+  if (processedItems.length === 0 && searchQuery) {
+    return (
+      <div className="text-center py-24 glass-card max-w-2xl mx-auto">
+        <div className="w-20 h-20 bg-slate-50 text-slate-400 rounded-3xl flex items-center justify-center mx-auto mb-6">
+          <Search size={40} />
+        </div>
+        <h3 className="text-2xl font-bold text-slate-900 font-outfit">No matches found</h3>
+        <p className="text-slate-500 mt-3 max-w-xs mx-auto">Try adjusting your search query to find what you're looking for.</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center gap-2 mt-8 px-8 py-3.5 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+        >
+          Clear Search
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto px-4 md:px-0 pb-12">
       <AnimatePresence>
-        {items.map((item, index) => (
+        {processedItems.map((item, index) => (
           <HistoryCard key={item.id} item={item} index={index} />
         ))}
       </AnimatePresence>
