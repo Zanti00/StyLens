@@ -15,10 +15,12 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import Stack from "@/components/ui/Stack";
 import { FolderDetailModal } from "./FolderDetailModal";
 import { CreateFolderModal } from "./CreateFolderModal";
 import { closetService, Folder as DBFolder } from "@/services/closet.service";
+import { analysisApi } from "@/lib/api";
 
 export interface Folder {
   id: string;
@@ -53,6 +55,8 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
   );
   const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("desc");
   const [hasUserSorted, setHasUserSorted] = React.useState(false);
+  const [isAnalyzingFolder, setIsAnalyzingFolder] = React.useState(false);
+  const router = useRouter();
 
   const toggleSort = (newSortBy: "date" | "category" | "title") => {
     if (hasUserSorted && sortBy === newSortBy) {
@@ -225,6 +229,22 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
     } catch (error) {
       console.error("Failed to delete folder:", error);
       throw error;
+    }
+  };
+
+  const handleAnalyzeFolder = async (id: string) => {
+    const folder = folders.find((f) => f.id === id);
+    if (!folder || folder.images.length === 0) return;
+
+    try {
+      // Store images in sessionStorage for the uploader to pick up on the homepage
+      sessionStorage.setItem(
+        "pending_analysis_images",
+        JSON.stringify(folder.images),
+      );
+      router.push("/homepage");
+    } catch (error) {
+      console.error("Failed to prepare folder for analysis:", error);
     }
   };
 
@@ -539,6 +559,8 @@ export default function ClosetClient({ initialUser }: ClosetClientProps) {
         onClose={() => setSelectedFolder(null)}
         onEdit={() => setIsCreateModalOpen(true)}
         onDelete={handleDeleteFolder}
+        onAnalyze={handleAnalyzeFolder}
+        isAnalyzing={isAnalyzingFolder}
         currentImageIndex={currentImageIndex}
         setCurrentImageIndex={setCurrentImageIndex}
       />

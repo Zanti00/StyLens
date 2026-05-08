@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Trash2,
   Maximize2,
+  Sparkles,
 } from "lucide-react";
 import { lockScroll, unlockScroll } from "@/lib/scroll-lock";
 import { ConfirmModal } from "../ui/ConfirmModal";
@@ -22,6 +23,8 @@ interface FolderDetailModalProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: (id: string) => Promise<void>;
+  onAnalyze?: (id: string) => void;
+  isAnalyzing?: boolean;
   currentImageIndex: number;
   setCurrentImageIndex: (index: number | ((prev: number) => number)) => void;
 }
@@ -32,6 +35,8 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
   onClose,
   onEdit,
   onDelete,
+  onAnalyze,
+  isAnalyzing = false,
   currentImageIndex,
   setCurrentImageIndex,
 }) => {
@@ -222,14 +227,28 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
                     />
                     Edit Folder Details
                   </button>
-                  <button
-                    onClick={() => setShowConfirm(true)}
-                    disabled={isDeleting}
-                    className="w-full flex items-center justify-center gap-2.5 bg-red-50 text-red-500 font-bold py-5 rounded-2xl hover:bg-red-100 transition-all active:scale-[0.98] disabled:opacity-50"
-                  >
-                    <Trash2 size={18} />
-                    Delete Style Folder
-                  </button>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => onAnalyze?.(folder.id)}
+                      disabled={isAnalyzing || isDeleting}
+                      className="flex-1 flex items-center justify-center gap-2.5 border-2 border-slate-200 text-slate-900 font-bold py-5 rounded-2xl hover:bg-slate-50 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {isAnalyzing ? (
+                        <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles size={18} className="text-indigo-500" />
+                      )}
+                      {isAnalyzing ? "Analyzing..." : "Analyze"}
+                    </button>
+                    <button
+                      onClick={() => setShowConfirm(true)}
+                      disabled={isDeleting}
+                      className="flex-1 flex items-center justify-center gap-2.5 bg-red-50 text-red-500 font-bold py-5 rounded-2xl hover:bg-red-100 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      <Trash2 size={18} />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>

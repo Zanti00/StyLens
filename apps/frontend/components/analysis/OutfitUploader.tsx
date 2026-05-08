@@ -47,6 +47,44 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
     return () => window.removeEventListener("keydown", handleEsc);
   }, []);
 
+  // Handle pending images from closet
+  useEffect(() => {
+    const handlePendingImages = async () => {
+      const pending = sessionStorage.getItem("pending_analysis_images");
+      if (pending) {
+        try {
+          const urls = JSON.parse(pending);
+          sessionStorage.removeItem("pending_analysis_images");
+
+          const fetchImageAsFile = async (
+            url: string,
+            filename: string,
+          ): Promise<File> => {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            return new File([blob], filename, { type: blob.type });
+          };
+
+          const filePromises = urls.map((url: string, i: number) =>
+            fetchImageAsFile(url, `folder-image-${i}.jpg`),
+          );
+
+          const files = await Promise.all(filePromises);
+
+          setSelectedFiles(files);
+          setPreviews(urls);
+          setActiveIndex(0);
+
+          // Automatically trigger analysis for closet folders
+          handleGenerateAnalysis(files);
+        } catch (e) {
+          console.error("Failed to load pending images:", e);
+        }
+      }
+    };
+    handlePendingImages();
+  }, []);
+
   const handleFilesChange = (newFiles: FileList | File[]) => {
     const filesArray = Array.from(newFiles);
     const validFiles: File[] = [];
@@ -157,16 +195,15 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleGenerateAnalysis = async () => {
-    if (selectedFiles.length === 0) return;
+  const handleGenerateAnalysis = async (filesToUse?: File[]) => {
+    const files = filesToUse || selectedFiles;
+    if (files.length === 0) return;
 
     setIsAnalyzing(true);
     try {
       const formData = new FormData();
-      // For now, we'll send all selected files if the backend supports it, 
-      // otherwise we might need to adjust this.
       // Add all selected files to the form data
-      selectedFiles.forEach((file) => {
+      files.forEach((file) => {
         formData.append("files", file);
       });
 
@@ -251,13 +288,13 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 className="relative w-full h-full flex flex-col items-center"
               >
                 <div
-                  className="relative w-full aspect-square max-h-[400px] rounded-3xl overflow-hidden shadow-2xl mb-6 cursor-zoom-in group/preview"
+                  className="relative w-full aspect-[3/4] max-h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl mb-6 cursor-zoom-in group/preview"
                   onClick={() => setIsMaximized(true)}
                 >
                   <img
                     src={previews[0]}
                     alt="Preview"
-                    className="w-full h-full object-cover transition-transform duration-700"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover/preview:scale-105"
                   />
 
                   {/* Overlay on hover */}
@@ -272,20 +309,20 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                       e.stopPropagation();
                       removeFile(0);
                     }}
-                    className="absolute top-4 right-4 p-2.5 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl hover:bg-red-500 transition-all shadow-xl z-10"
+                    className="absolute top-6 right-6 p-2.5 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl hover:bg-red-500 transition-all shadow-xl z-10"
                     title="Remove photo"
                   >
                     <X size={20} />
                   </button>
                 </div>
 
-                {/* Thumbnail Gallery - Exactly 4 slots at the bottom */}
+                {/* Thumbnail Gallery - Styled to match AnalysisDetail */}
                 <div className="flex flex-wrap gap-3 mb-8 justify-center">
                   {/* Existing secondary images (slots 2-5) */}
                   {previews.slice(1).map((src, index) => (
                     <div
                       key={index + 1}
-                      className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 group/thumbnail"
+                      className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105 hover:border-slate-300 group/thumbnail"
                       onClick={(e) => {
                         e.stopPropagation();
                         swapWithMain(index + 1);
@@ -353,7 +390,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 className="w-full flex flex-col md:flex-row gap-8 items-start"
               >
                 {/* Left Side: Image Preview */}
-                <div className="w-full md:w-2/5 md:sticky md:top-8">
+                <div className="w-full md:w-2/5 md:sticky md:top-24">
                   <div
                     className="relative aspect-[3/4] w-full rounded-[2.5rem] overflow-hidden shadow-2xl group/preview cursor-zoom-in"
                     onClick={() => setIsMaximized(true)}
@@ -385,13 +422,13 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                     </div>
                   </div>
 
-                  {/* Auxiliary Images Gallery (Analysis View) */}
+                  {/* Auxiliary Images Gallery (Analysis View) - Matched to AnalysisDetail */}
                   {previews.length > 1 && (
                     <div className="flex flex-wrap gap-3 mt-6 justify-center">
                       {previews.slice(1).map((src, index) => (
                         <div
                           key={index + 1}
-                          className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105"
+                          className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105 hover:border-slate-300"
                           onClick={(e) => {
                             e.stopPropagation();
                             swapWithMain(index + 1);
