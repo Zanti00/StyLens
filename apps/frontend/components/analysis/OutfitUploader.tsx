@@ -16,6 +16,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { closetService } from "@/services/closet.service";
 
 interface OutfitUploaderProps {
   onFileSelect: (file: File | null) => void;
@@ -33,6 +34,8 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [randomCategories, setRandomCategories] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Close on Escape key
@@ -182,6 +185,34 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
       alert("Failed to analyze outfit. Please try again.");
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleSaveToCloset = async () => {
+    if (selectedFiles.length === 0 || !result) return;
+
+    setIsSaving(true);
+    try {
+      const now = new Date();
+      const title = `Analysis ${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      const description = result.overall_summary || "Saved from outfit analysis";
+      const aesthetic = randomCategories;
+
+      await closetService.createFolder(
+        title,
+        description,
+        aesthetic,
+        selectedFiles
+      );
+      setSaveSuccess(true);
+
+      // Reset success after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error("Failed to save to closet:", error);
+      alert("Failed to save to closet. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -486,12 +517,32 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
 
                   {/* Row 4: Action Buttons */}
                   <div className="grid grid-cols-2 gap-4 pt-2">
-                    <button className="flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-slate-900/10 active:scale-95 group">
-                      <Save
-                        size={18}
-                        className="group-hover:scale-110 transition-transform"
-                      />
-                      <span>Save to Closet</span>
+                    <button
+                      onClick={handleSaveToCloset}
+                      disabled={isSaving || saveSuccess}
+                      className={`flex items-center justify-center gap-2 font-bold py-4 rounded-2xl transition-all shadow-xl active:scale-95 group ${
+                        saveSuccess
+                          ? "bg-emerald-500 text-white"
+                          : "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/10"
+                      }`}
+                    >
+                      {isSaving ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : saveSuccess ? (
+                        <CheckCircle2 size={18} />
+                      ) : (
+                        <Save
+                          size={18}
+                          className="group-hover:scale-110 transition-transform"
+                        />
+                      )}
+                      <span>
+                        {isSaving
+                          ? "Saving..."
+                          : saveSuccess
+                            ? "Saved!"
+                            : "Save to Closet"}
+                      </span>
                     </button>
                     <button
                       onClick={() => setShowAnalysis(false)}
