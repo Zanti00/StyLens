@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { lockScroll, unlockScroll } from "@/lib/scroll-lock";
 import { ConfirmModal } from "../ui/ConfirmModal";
-import { Folder } from "./ClosetClient";
+import { Folder } from "@/lib/mappers/closet";
 
 // Removed local Folder interface in favor of shared import
 
