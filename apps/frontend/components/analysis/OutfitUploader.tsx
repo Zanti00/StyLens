@@ -36,7 +36,24 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   const [randomCategories, setRandomCategories] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [usageStats, setUsageStats] = useState<{ used: number; limit: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch usage stats on mount
+  useEffect(() => {
+    const fetchUsage = async () => {
+      try {
+        const { analysisApi } = await import("@/lib/api");
+        const res = await analysisApi.getUsageStats();
+        if (res.success && res.data) {
+          setUsageStats(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch usage stats", err);
+      }
+    };
+    fetchUsage();
+  }, []);
 
   // Close on Escape key
   useEffect(() => {
@@ -192,7 +209,25 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
     setShowAnalysis(false);
     setResult(null);
     setRandomCategories([]);
+    setSaveSuccess(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const getLocation = (): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve(`${position.coords.latitude},${position.coords.longitude}`),
+        (error) => {
+          console.warn("Geolocation failed or denied:", error);
+          resolve(null);
+        },
+        { timeout: 10000 } // 10 second timeout
+      );
+    });
   };
 
   const handleGenerateAnalysis = async (filesToUse?: File[]) => {
@@ -206,6 +241,12 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
       files.forEach((file) => {
         formData.append("files", file);
       });
+
+      // Prompt and get user location for weather context
+      const location = await getLocation();
+      if (location) {
+        formData.append("weather_location", location);
+      }
 
       const { analysisApi } = await import("@/lib/api");
       const response = await analysisApi.upload(formData);
@@ -242,9 +283,6 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
         selectedFiles
       );
       setSaveSuccess(true);
-
-      // Reset success after 3 seconds
-      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error("Failed to save to closet:", error);
       alert("Failed to save to closet. Please try again.");
@@ -253,8 +291,22 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
     }
   };
 
+  const isNearLimit = usageStats ? usageStats.used >= usageStats.limit * 0.8 : false;
+
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
+      {isNearLimit && !showAnalysis && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-6 py-4 rounded-2xl flex items-start gap-4 shadow-sm">
+          <div className="mt-0.5">
+            <Lightbulb className="text-amber-500" size={20} />
+          </div>
+          <div>
+            <h4 className="font-bold">API Limit Warning</h4>
+            <p className="text-sm mt-1">You have reached 80% of your daily limit ({usageStats?.used}/{usageStats?.limit} used). To conserve your quota, further analyses will use the generic fallback model.</p>
+          </div>
+        </div>
+      )}
+
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -447,6 +499,17 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
 
                 {/* Right Side: Analysis Grid */}
                 <div className="w-full md:w-3/5 space-y-6">
+                  {/* Generic Analysis Badge */}
+                  {result?.is_generic && (
+                    <div className="bg-slate-800 text-white px-4 py-3 rounded-2xl flex items-center justify-between shadow-lg">
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="text-amber-400" size={18} />
+                        <span className="font-bold text-sm">Generic Analysis Mode</span>
+                      </div>
+                      <span className="text-xs text-slate-400 font-medium px-2 bg-slate-900/50 rounded-lg py-1">API Limit Fallback</span>
+                    </div>
+                  )}
+
                   {/* Row 1: Numeric Rating */}
                   <div className="glass rounded-[2rem] p-8 flex flex-col items-center justify-center text-center space-y-4 border border-white/40 shadow-xl relative overflow-hidden group/rating">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-slate-900/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover/rating:bg-slate-900/20 transition-colors" />

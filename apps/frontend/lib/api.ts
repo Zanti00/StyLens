@@ -44,5 +44,8 @@ export const analysisApi = {
   },
   getDetail: async (id: string) => {
     return fetchWithAuth(`/analyses/${id}`);
+  },
+  getUsageStats: async () => {
+    return fetchWithAuth(`/analyses/stats/usage`);
   }
 };

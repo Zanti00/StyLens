@@ -1,5 +1,6 @@
 from app.config import settings
 from supabase import create_client, Client
+from datetime import datetime, timezone
 
 class AnalysisRepository:
     def __init__(self):
@@ -11,7 +12,7 @@ class AnalysisRepository:
         Inserts a new analysis record into the database.
         """
         response = self.supabase.table(self.table).insert(data).execute()
-        if len(response.data) > 0:
+        if len(response.data) > 0 and isinstance(response.data[0], dict):
             return response.data[0]
         return {}
 
@@ -36,7 +37,7 @@ class AnalysisRepository:
             .eq("id", analysis_id)\
             .eq("user_id", user_id)\
             .execute()
-        if len(response.data) > 0:
+        if len(response.data) > 0 and isinstance(response.data[0], dict):
             return response.data[0]
         return {}
 
@@ -50,5 +51,19 @@ class AnalysisRepository:
             .eq("user_id", user_id)\
             .execute()
         return len(response.data) > 0
+
+    async def get_daily_usage_count(self, user_id: str) -> int:
+        """
+        Gets the total number of analyses created by the user today.
+        """
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        response = (
+            self.supabase.table(self.table)
+            .select("id", count="exact")  # type: ignore
+            .eq("user_id", user_id)
+            .gte("created_at", today_start)
+            .execute()
+        )
+        return response.count if response.count is not None else len(response.data)
 
 analysis_repo = AnalysisRepository()

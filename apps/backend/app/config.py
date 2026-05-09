@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str = "your-jwt-secret"
     supabase_public_key: str = "" # Optional, for RS256
     llm_api_key: str = "your-llm-api-key"
+    gemini_api_key: str | None = None
     weather_api_key: str = "your-weather-api-key"
     environment: str = "development"
 

@@ -17,6 +17,7 @@ dependencies = [
     "python-magic>=0.4",
     "slowapi>=0.1",
     "cachetools>=5.3",
+    "google-genai>=0.5",
 ]
 
 [project.optional-dependencies]

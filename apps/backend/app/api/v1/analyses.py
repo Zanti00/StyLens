@@ -4,6 +4,7 @@ from app.dependencies.auth import get_current_user
 from app.services.storage_service import storage_service
 from app.services.weather_service import weather_service
 from app.repositories.analysis_repo import analysis_repo
+from app.services.ai_service import ai_service
 from app.schemas.analysis import ApiResponse
 
 STYLE_CATEGORIES = [
@@ -40,45 +41,51 @@ async def create_analysis(
         
     primary_image = upload_results[0]
     auxiliary_paths = [res["path"] for res in upload_results[1:]]
+    all_paths = [primary_image["path"]] + auxiliary_paths
     
     # 2. Get Weather Context (Optional)
     weather_context = None
     if user_weather_input:
         weather_context = {"condition": user_weather_input, "source": "user"}
-    elif weather_location:
-        weather_context = await weather_service.get_weather(weather_location)
+    else:
+        # Default to Philippines if geolocation was denied or missing
+        loc = weather_location if weather_location else "Philippines"
+        weather_context = await weather_service.get_weather(loc)
         if weather_context:
             weather_context["source"] = "api"
 
-    # 3. Placeholder for AI Analysis (Skipped per user request)
-    # Pick random categories
-    random_styles = random.sample(STYLE_CATEGORIES, k=random.randint(2, 3))
+    # 3. Call AI Service
+    daily_count = await analysis_repo.get_daily_usage_count(user["id"])
+    LIMIT = 20
+    should_mock = daily_count >= LIMIT
+
+    ai_result = await ai_service.analyze_outfit(
+        image_paths=all_paths, 
+        weather_context=weather_context, 
+        mock=should_mock
+    )
     
-    # Dummy result for now - Temporary mock for faster UX feedback
     analysis_data = {
         "user_id": user["id"],
-        "title": f"{random.choice(['Daily', 'Street', 'Evening', 'Work', 'Weekend'])} Outfit Analysis",
+        "title": ai_result.get("title", "Outfit Analysis"),
         "image_url": primary_image["url"],
         "image_path": primary_image["path"],
         "auxiliary_image_paths": auxiliary_paths,
         "weather_context": weather_context,
-        "rating": 7.0,
-        "overall_summary": "it is good",
-        "color_analysis": {
-            "hex_codes": ["#ffffff", "#1a1a1a"],
-            "verdict": "need more blue"
-        },
-        "fit_proportion_analysis": "too large for your size",
-        "style_notes_tips": [
-            "lower the size",
-            "add more colors"
-        ],
-        "style_preference": random_styles,
-        "status": "mocked"
+        "rating": ai_result.get("rating", 0.0),
+        "overall_summary": ai_result.get("overall_summary", ""),
+        "color_analysis": ai_result.get("color_analysis", {}),
+        "fit_proportion_analysis": ai_result.get("fit_proportion_analysis", ""),
+        "style_notes_tips": ai_result.get("style_notes_tips", []),
+        "style_preference": ai_result.get("style_preference", []),
+        "status": "completed"
     }
+
+    is_generic = ai_result.get("is_generic", False)
 
     # 4. Save to DB
     saved_record = await analysis_repo.create_analysis(analysis_data)
+    saved_record["is_generic"] = is_generic
     
     # Include all signed URLs in the response
     all_paths = [saved_record["image_path"]] + (saved_record.get("auxiliary_image_paths") or [])
@@ -167,13 +174,13 @@ async def get_usage_stats(user: dict = Depends(get_current_user)):
     """
     Returns the user's daily analysis usage and limit.
     """
-    # For now, return static data or fetch from daily_usage table if implemented
+    daily_count = await analysis_repo.get_daily_usage_count(user["id"])
     return {
         "success": True,
         "data": {
-            "used": 3,
-            "limit": 5,
-            "reset_in_hours": 12
+            "used": daily_count,
+            "limit": 20,
+            "reset_in_hours": 24 # Just hardcoding a static reset time for now
         },
         "error": None
     }
