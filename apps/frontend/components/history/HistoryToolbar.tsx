@@ -210,9 +210,11 @@ export const HistoryToolbar: React.FC<HistoryToolbarProps> = ({
 
         <Link
           href="/"
-          className="flex-1 md:flex-none flex items-center justify-center gap-2.5 px-7 py-3.5 bg-indigo-600 text-white font-bold rounded-2xl border border-white/50 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group"
+          className="flex-1 md:flex-none flex items-center justify-center gap-2.5 px-7 py-3.5 bg-btn-primary text-white font-bold rounded-2xl border border-white/50 hover:bg-slate-900 transition-all group"
         >
-          <Sparkles size={18} />
+          <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+            <Sparkles size={14} strokeWidth={3} className="text-slate-600" />
+          </div>
           New Analysis
         </Link>
       </div>

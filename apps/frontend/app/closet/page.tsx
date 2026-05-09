@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 import ClosetClient from "@/components/closet/ClosetClient";
 
 export const metadata = {
@@ -7,10 +7,7 @@ export const metadata = {
 };
 
 export default async function ClosetPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   return (
     <div className="flex-1">

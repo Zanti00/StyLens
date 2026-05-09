@@ -14,6 +14,7 @@ import {
   Lightbulb,
   Save,
   RotateCcw,
+  MessageSquareText,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { closetService } from "@/services/closet.service";
@@ -37,6 +38,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [usageStats, setUsageStats] = useState<{ used: number; limit: number } | null>(null);
+  const [additionalInfo, setAdditionalInfo] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch usage stats on mount
@@ -210,6 +212,7 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
     setResult(null);
     setRandomCategories([]);
     setSaveSuccess(false);
+    setAdditionalInfo("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -246,6 +249,10 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
       const location = await getLocation();
       if (location) {
         formData.append("weather_location", location);
+      }
+
+      if (additionalInfo.trim()) {
+        formData.append("user_additional_info", additionalInfo.trim());
       }
 
       const { analysisApi } = await import("@/lib/api");
@@ -337,101 +344,141 @@ export const OutfitUploader: React.FC<OutfitUploaderProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="relative w-full h-full flex flex-col items-center"
+                className="relative w-full h-full flex flex-col lg:flex-row gap-10 items-start p-2"
               >
-                <div
-                  className="relative w-full aspect-[3/4] max-h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl mb-6 cursor-zoom-in group/preview"
-                  onClick={() => setIsMaximized(true)}
-                >
-                  <img
-                    src={previews[0]}
-                    alt="Preview"
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover/preview:scale-105"
-                  />
+                {/* Left Column: Image Previews */}
+                <div className="w-full lg:w-1/2 flex flex-col items-center">
+                  <div
+                    className="relative w-full aspect-[3/4] max-h-[500px] rounded-[2.5rem] overflow-hidden shadow-2xl mb-6 cursor-zoom-in group/preview"
+                    onClick={() => setIsMaximized(true)}
+                  >
+                    <img
+                      src={previews[0]}
+                      alt="Preview"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover/preview:scale-105"
+                    />
 
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-slate-900/0 group-hover/preview:bg-slate-900/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover/preview:opacity-100">
-                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shadow-2xl transform scale-90 group-hover/preview:scale-100 transition-all duration-300">
-                      <Maximize2 size={24} />
+                    {/* Overlay on hover */}
+                    <div className="absolute inset-0 bg-slate-900/0 group-hover/preview:bg-slate-900/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover/preview:opacity-100">
+                      <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/30 text-white shadow-2xl transform scale-90 group-hover/preview:scale-100 transition-all duration-300">
+                        <Maximize2 size={24} />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(0);
+                      }}
+                      className="absolute top-6 right-6 p-2.5 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl hover:bg-red-500 transition-all shadow-xl z-10"
+                      title="Remove photo"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Thumbnail Gallery */}
+                  <div className="flex flex-wrap gap-3 justify-center">
+                    {/* Existing secondary images (slots 2-5) */}
+                    {previews.slice(1).map((src, index) => (
+                      <div
+                        key={index + 1}
+                        className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105 hover:border-slate-300 group/thumbnail"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          swapWithMain(index + 1);
+                        }}
+                      >
+                        <img src={src} className="w-full h-full object-cover" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(index + 1);
+                          }}
+                          className="absolute top-0.5 right-0.5 p-0.5 bg-slate-900/80 text-white rounded-lg hover:bg-red-500 transition-colors opacity-0 group-hover/thumbnail:opacity-100"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {/* Empty slots (Add buttons) to fill the 4 slots */}
+                    {Array.from({ length: 4 - (previews.length - 1) }).map((_, i) => (
+                      <button
+                        key={`add-${i}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-slate-900 hover:text-slate-900 transition-all bg-white/50"
+                      >
+                        <Upload size={16} />
+                        <span className="text-[10px] font-bold mt-1">Add</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right Column: Context Input & Actions */}
+                <div className="w-full lg:w-1/2 flex flex-col h-full space-y-8 py-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-slate-800">
+                      <div className="p-2 bg-slate-900 text-white rounded-xl">
+                        <MessageSquareText size={20} />
+                      </div>
+                      <h3 className="text-xl font-bold font-outfit">Additional Context</h3>
+                    </div>
+                    <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                      Tell the AI more about this outfit. Where are you going? What's the occasion? Are there specific details you want feedback on?
+                    </p>
+                    <div className="relative group">
+                      <textarea
+                        value={additionalInfo}
+                        onChange={(e) => setAdditionalInfo(e.target.value)}
+                        placeholder="e.g., I'm wearing this to a summer wedding. I'm not sure if the tie matches the pocket square..."
+                        className="w-full min-h-[180px] p-6 rounded-[1.5rem] bg-white border-2 border-slate-100 focus:border-slate-900 focus:ring-0 transition-all duration-300 text-slate-700 placeholder:text-slate-300 resize-none shadow-sm hover:shadow-md group-hover:border-slate-200"
+                      />
+                      <div className="absolute bottom-4 right-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                        Optional
+                      </div>
                     </div>
                   </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeFile(0);
-                    }}
-                    className="absolute top-6 right-6 p-2.5 bg-slate-900/80 backdrop-blur-md text-white rounded-2xl hover:bg-red-500 transition-all shadow-xl z-10"
-                    title="Remove photo"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                {/* Thumbnail Gallery - Styled to match AnalysisDetail */}
-                <div className="flex flex-wrap gap-3 mb-8 justify-center">
-                  {/* Existing secondary images (slots 2-5) */}
-                  {previews.slice(1).map((src, index) => (
-                    <div
-                      key={index + 1}
-                      className="relative w-16 h-16 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105 hover:border-slate-300 group/thumbnail"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        swapWithMain(index + 1);
-                      }}
-                    >
-                      <img src={src} className="w-full h-full object-cover" />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFile(index + 1);
-                        }}
-                        className="absolute top-0.5 right-0.5 p-0.5 bg-slate-900/80 text-white rounded-lg hover:bg-red-500 transition-colors opacity-0 group-hover/thumbnail:opacity-100"
-                      >
-                        <X size={10} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {/* Empty slots (Add buttons) to fill the 4 slots */}
-                  {Array.from({ length: 4 - (previews.length - 1) }).map((_, i) => (
+                  <div className="pt-4">
                     <button
-                      key={`add-${i}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        fileInputRef.current?.click();
+                        handleGenerateAnalysis();
                       }}
-                      className="w-16 h-16 rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-slate-900 hover:text-slate-900 transition-all bg-white/50"
+                      disabled={isAnalyzing}
+                      className="w-full flex items-center justify-center gap-3 bg-slate-900 hover:bg-slate-800 text-white font-bold px-10 py-5 rounded-[1.5rem] shadow-2xl shadow-slate-900/20 transition-all hover:scale-[1.02] active:scale-[0.98] group disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      <Upload size={16} />
-                      <span className="text-[10px] font-bold mt-1">Add</span>
+                      {isAnalyzing ? (
+                        <div className="flex items-center gap-3">
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Analyzing...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Sparkles
+                            size={22}
+                            className="group-hover:rotate-12 transition-transform text-amber-400"
+                          />
+                          <span className="text-lg">Generate AI Analysis</span>
+                        </>
+                      )}
                     </button>
-                  ))}
-                </div>
+                  </div>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleGenerateAnalysis();
-                  }}
-                  disabled={isAnalyzing}
-                  className="flex items-center gap-2.5 bg-btn-primary hover:bg-btn-primary-hover text-white font-bold px-8 py-4 rounded-2xl shadow-xl shadow-slate-900/20 transition-all hover:scale-105 active:scale-95 group disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {isAnalyzing ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Analyzing...</span>
+                  <div className="bg-slate-50 rounded-2xl p-4 flex items-start gap-3 border border-slate-100">
+                    <div className="mt-0.5 text-slate-400">
+                      <Lightbulb size={16} />
                     </div>
-                  ) : (
-                    <>
-                      <Sparkles
-                        size={22}
-                        className="group-hover:rotate-12 transition-transform"
-                      />
-                      <span>Generate Analysis</span>
-                    </>
-                  )}
-                </button>
+                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                      Pro tip: Mentioning the event type and your personal style goals helps the AI provide much more relevant and specific styling advice.
+                    </p>
+                  </div>
+                </div>
               </motion.div>
             ) : (
               <motion.div

@@ -184,8 +184,8 @@ export const FolderDetailModal: React.FC<FolderDetailModalProps> = ({
               </div>
 
               {/* Right Side: Details */}
-              <div className="w-full md:w-2/5 p-12 flex flex-col justify-between">
-                <div className="space-y-8">
+              <div className="w-full md:w-2/5 p-12 flex flex-col overflow-y-auto custom-scrollbar">
+                <div className="flex-1 space-y-8">
                   <div className="space-y-2">
                     <h2 className="text-4xl font-black text-slate-900 tracking-tight">
                       {folder.title}

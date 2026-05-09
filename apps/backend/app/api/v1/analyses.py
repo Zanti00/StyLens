@@ -26,6 +26,7 @@ async def create_analysis(
     files: List[UploadFile] = File(...),
     weather_location: Optional[str] = Form(None),
     user_weather_input: Optional[str] = Form(None),
+    user_additional_info: Optional[str] = Form(None),
     user: dict = Depends(get_current_user)
 ):
     import random
@@ -61,7 +62,8 @@ async def create_analysis(
 
     ai_result = await ai_service.analyze_outfit(
         image_paths=all_paths, 
-        weather_context=weather_context, 
+        weather_context=weather_context,
+        user_additional_info=user_additional_info,
         mock=should_mock
     )
     
@@ -78,6 +80,7 @@ async def create_analysis(
         "fit_proportion_analysis": ai_result.get("fit_proportion_analysis", ""),
         "style_notes_tips": ai_result.get("style_notes_tips", []),
         "style_preference": ai_result.get("style_preference", []),
+        "user_additional_info": user_additional_info,
         "status": "completed"
     }
 

@@ -31,6 +31,7 @@ class AIService:
         self, 
         image_paths: List[str], 
         weather_context: Optional[Dict[str, Any]] = None, 
+        user_additional_info: Optional[str] = None,
         mock: bool = True
     ) -> Dict[str, Any]:
         """
@@ -38,18 +39,34 @@ class AIService:
         If mock=True, it returns a hardcoded structure to save API limits.
         """
         if mock:
-            return self._get_mock_analysis(weather_context)
+            return self._get_mock_analysis(weather_context, user_additional_info)
 
         if not self.client:
             logger.warning("Gemini API key is not set. Falling back to mock data.")
-            return self._get_mock_analysis(weather_context)
+            return self._get_mock_analysis(weather_context, user_additional_info)
 
         # Build prompt
-        prompt = self._build_prompt(weather_context)
+        prompt = self._build_prompt(weather_context, user_additional_info)
         
-        # NOTE: For a real implementation with images, we would fetch the image bytes or 
-        # use the Gemini File API to pass the images to the model. 
-        # Here we only structure the prompt and request logic.
+        # Fetch image bytes and prepare contents
+        from app.services.storage_service import storage_service
+        import mimetypes
+        
+        contents_to_send: List[Any] = [prompt]
+        
+        try:
+            for path in image_paths:
+                image_bytes = storage_service.supabase.storage.from_(storage_service.bucket_name).download(path)
+                mime_type, _ = mimetypes.guess_type(path)
+                mime_type = mime_type or "image/jpeg"
+                contents_to_send.append(
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+                )
+        except Exception as e:
+            logger.error(f"Failed to fetch images for AI analysis: {e}")
+            # If we strictly need images for analysis, we might mock or raise
+            # We'll continue with just prompt or fallback to mock
+            return self._get_mock_analysis(weather_context, user_additional_info)
         
         try:
             # Setup generation config to ensure JSON output
@@ -57,7 +74,7 @@ class AIService:
             # e.g., response_schema = YourPydanticModel
             response = self.client.models.generate_content(
                 model='gemini-2.5-flash',
-                contents=prompt,
+                contents=contents_to_send,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
                     temperature=0.7,
@@ -83,49 +100,51 @@ class AIService:
                 logger.warning(f"Gemini API Quota Exceeded (429). Falling back to mock. Details: {e}")
             else:
                 logger.error(f"Gemini API Error: {e}")
-            return self._get_mock_analysis(weather_context)
+            return self._get_mock_analysis(weather_context, user_additional_info)
         except Exception as e:
             logger.error(f"Error during AI analysis: {e}")
             # Fallback to mock on error
-            return self._get_mock_analysis(weather_context)
+            return self._get_mock_analysis(weather_context, user_additional_info)
 
-    def _build_prompt(self, weather_context: Optional[Dict[str, Any]]) -> str:
+    def _build_prompt(self, weather_context: Optional[Dict[str, Any]], user_additional_info: Optional[str] = None) -> str:
         weather_info = "No specific weather context provided."
         if weather_context:
             condition = weather_context.get("condition", "unknown")
             temp = weather_context.get("temp", "unknown")
             location = weather_context.get("location", "unknown")
             weather_info = f"Condition: {condition}, Temperature: {temp}°C, Location: {location}"
+        
+        user_info = f"User's Additional Context: {user_additional_info}" if user_additional_info else "No additional context provided by the user."
 
         categories_str = ", ".join([f'"{c}"' for c in STYLE_CATEGORIES])
 
-        prompt = f"""You are an expert fashion stylist with a keen eye for modern trends, aesthetics, and practical styling.
-Your task is to analyze the provided outfit image(s) and deliver a comprehensive fashion critique.
+        prompt = f"""You are an objective, honest, and constructive fashion stylist. You provide realistic feedback without sugarcoating, but you remain encouraging. If an outfit works well, praise it. If it has flaws, is ill-fitting, or is inappropriate for the context, point it out constructively and offer actionable solutions.
 
 **EVALUATION RUBRIC:**
-1. **Color Harmony**: Evaluate the color palettes used. Do the colors complement each other? Are there clashing tones or harmonious contrasts? Extract the dominant hex codes.
-2. **Fit & Proportions**: Judge the silhouette, tailoring, and layering. Does the clothing fit well? Are the proportions balanced?
-3. **Contextual Appropriateness**: Determine if the outfit suits the current weather. 
-   - Current Weather Context: {weather_info}
-4. **Originality & Styling**: Assess the use of accessories, unique details, and the overall aesthetic vibe.
+1. **Color Harmony**: Evaluate the color palettes used. Do the colors work well together? Are there clashing tones or washed-out areas? Extract the dominant hex codes.
+2. **Fit & Proportions**: Judge the silhouette, tailoring, and layering. Is the fit flattering? Are the proportions balanced? Note any areas that could use better tailoring.
+3. **Contextual Appropriateness (Crucial)**: Evaluate if the outfit makes sense for the weather and location. If they are dressed too warm for the heat or too light for the cold, point it out clearly.
+   - Current Context: {weather_info}
+   - User Input: {user_info}
+4. **Originality & Styling**: Assess accessories and details. Is the outfit well-styled, or does it feel generic? Suggest what could elevate the look.
 
 **INSTRUCTIONS:**
 You must provide your analysis strictly in JSON format matching the following structure exactly. Do NOT wrap the JSON in markdown blocks like ```json ... ```, output only the raw JSON.
 
 **JSON SCHEMA:**
 {{
-  "title": "A catchy, short title for the outfit (e.g., 'Urban Winter Layering', 'Casual Summer Chic')",
-  "rating": <float between 0.0 and 10.0 representing the overall style score>,
-  "overall_summary": "A 1-2 sentence overall impression of the outfit.",
+  "title": "A catchy, short title for the outfit (e.g., 'Casual Comfort', 'Solid but Needs Contrast')",
+  "rating": <float between 0.0 and 10.0 representing the overall style score. Be objective and fair>,
+  "overall_summary": "A 1-2 sentence honest but constructive overall impression of the outfit. Highlight what works and what doesn't.",
   "color_analysis": {{
     "hex_codes": ["<hex_code_1>", "<hex_code_2>"], // 2 to 4 dominant hex colors (e.g., '#FFFFFF')
     "verdict": "A brief analysis of the color harmony based on the rubric."
   }},
-  "fit_proportion_analysis": "A detailed analysis of the fit and proportions based on the rubric.",
+  "fit_proportion_analysis": "An objective analysis of the fit and proportions. Highlight both positives and areas for improvement.",
   "style_notes_tips": [
     "Tip 1...",
     "Tip 2..."
-  ], // 2 to 4 actionable styling tips or notes
+  ], // 2 to 4 actionable and helpful styling tips
   "style_preference": ["<category_1>", "<category_2>"] 
 }}
 
@@ -135,7 +154,7 @@ The `style_preference` array MUST ONLY contain values from the following list. D
 """
         return prompt
 
-    def _get_mock_analysis(self, weather_context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _get_mock_analysis(self, weather_context: Optional[Dict[str, Any]], user_additional_info: Optional[str] = None) -> Dict[str, Any]:
         """Returns a mocked AI response."""
         weather_summary = "Looks great!"
         if weather_context:
