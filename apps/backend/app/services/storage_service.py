@@ -1,5 +1,6 @@
 import uuid
 import magic
+from typing import Any
 from fastapi import UploadFile, HTTPException
 from app.config import settings
 from supabase import create_client, Client
@@ -57,17 +58,41 @@ class StorageService:
             # Fallback or error handling
             return ""
 
-    def get_signed_urls(self, file_paths: list[str], expires_in: int = 3600) -> list[dict]:
+    def get_signed_urls(self, file_paths: list[str], expires_in: int = 3600) -> list[dict[str, Any]]:
         """
         Generates multiple short-lived signed URLs at once.
+        Chunks the requests to avoid Supabase storage limits.
         """
         if not file_paths:
             return []
-        try:
-            return self.supabase.storage.from_(self.bucket_name).create_signed_urls(file_paths, expires_in)
-        except Exception as e:
-            # Fallback to empty list or log error
-            return []
+            
+        all_results = []
+        # Chunk into batches of 50
+        batch_size = 50
+        for i in range(0, len(file_paths), batch_size):
+            batch = file_paths[i : i + batch_size]
+            try:
+                res = self.supabase.storage.from_(self.bucket_name).create_signed_urls(batch, expires_in)
+                if res:
+                    # Convert response objects to dicts to ensure consistency with fallback
+                    all_results.extend([
+                        r if isinstance(r, dict) else {
+                            "path": getattr(r, "path", None),
+                            "signedURL": getattr(r, "signedURL", getattr(r, "signedUrl", None))
+                        } for r in res
+                    ])
+            except Exception as e:
+                # If batch fails (e.g. validation error due to a missing file), fallback to individual calls
+                print(f"Batch failed, falling back to individual calls for {len(batch)} items: {e}")
+                for path in batch:
+                    try:
+                        s_url = self.get_signed_url(path, expires_in)
+                        if s_url:
+                            all_results.append({"path": path, "signedURL": s_url})
+                    except Exception:
+                        continue
+                
+        return all_results
 
     async def delete_image(self, file_path: str):
         """

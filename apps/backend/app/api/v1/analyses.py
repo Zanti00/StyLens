@@ -109,33 +109,46 @@ async def get_history(
 ):
     history = await analysis_repo.get_user_analyses(user["id"], limit, offset)
     
-    # Refresh signed URLs for all images
-    all_image_paths = []
+    # 1. Collect all unique image paths
+    all_image_paths = set()
     for item in history:
-        if item.get("image_path"):
-            all_image_paths.append(item["image_path"])
-        if item.get("auxiliary_image_paths"):
-            all_image_paths.extend(item["auxiliary_image_paths"])
+        if path := item.get("image_path"):
+            all_image_paths.add(path)
+        if aux_paths := item.get("auxiliary_image_paths"):
+            for p in aux_paths:
+                if p: all_image_paths.add(p)
             
+    # 2. Batch refresh signed URLs
     if all_image_paths:
-        signed_urls = storage_service.get_signed_urls(all_image_paths)
-        url_map = {res["path"]: res["signedURL"] for res in signed_urls if "signedURL" in res}
+        signed_urls = storage_service.get_signed_urls(list(all_image_paths))
+        # Handle different potential key names from Supabase (signedURL vs signedUrl, path vs name)
+        url_map = {}
+        for res in signed_urls:
+            s_url = res.get("signedURL") or res.get("signedUrl")
+            p_path = res.get("path") or res.get("name")
+            if s_url and p_path:
+                url_map[p_path] = s_url
         
+        # 3. Map refreshed URLs back to items
         for item in history:
-            item_urls = []
             # Primary image
             path = item.get("image_path")
             if path in url_map:
                 item["image_url"] = url_map[path]
-                item_urls.append(url_map[path])
             
             # Auxiliary images
             aux_paths = item.get("auxiliary_image_paths") or []
+            item_urls = []
+            # Start with primary if updated
+            if path in url_map:
+                item_urls.append(url_map[path])
+            
             for aux_path in aux_paths:
                 if aux_path in url_map:
                     item_urls.append(url_map[aux_path])
             
-            item["image_urls"] = item_urls
+            if item_urls:
+                item["image_urls"] = item_urls
 
     return {
         "success": True,

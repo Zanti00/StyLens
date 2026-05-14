@@ -9,6 +9,8 @@ import {
   ExternalLink,
   ArrowRight,
   Search,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -16,17 +18,34 @@ import { HistoryCardSkeleton } from "./HistoryCardSkeleton";
 
 // --- Sub-components ---
 
-const HistoryImage: React.FC<{ src: string }> = ({ src }) => (
-  <div className="relative w-full md:w-64 aspect-[4/5] md:aspect-square overflow-hidden flex-shrink-0">
-    <img
-      src={src}
-      alt="Outfit"
-      className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-      loading="lazy"
-    />
-    <div className="absolute inset-0 bg-black/5 pointer-events-none" />
-  </div>
-);
+const HistoryImage: React.FC<{ src: string }> = ({ src }) => {
+  const [error, setError] = useState(false);
+
+  return (
+    <div className="relative w-full md:w-64 aspect-[4/5] md:aspect-square overflow-hidden flex-shrink-0 bg-slate-50 flex items-center justify-center">
+      {!src || error ? (
+        <div className="flex flex-col items-center gap-2 text-slate-300">
+          <div className="p-3 bg-slate-100 rounded-2xl">
+            <Calendar size={24} />
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider">
+            {error ? "Load Error" : "No Image"}
+          </span>
+        </div>
+      ) : (
+        <>
+          <img
+            src={src}
+            alt="Outfit"
+            className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+            onError={() => setError(true)}
+          />
+          <div className="absolute inset-0 bg-black/5 pointer-events-none" />
+        </>
+      )}
+    </div>
+  );
+};
 
 const HistoryContent: React.FC<{
   title: string;
@@ -141,15 +160,22 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     loadHistory();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, sortOrder]);
+
   const loadHistory = async () => {
     try {
-      const response = await analysisApi.getHistory();
-      setItems(response.data.items);
+      const response = await analysisApi.getHistory(100);
+      const items = response?.data?.items || [];
+      setItems(Array.isArray(items) ? items : []);
       setError(null);
     } catch (err: any) {
       console.error("Failed to load history:", err);
@@ -199,6 +225,12 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
 
     return result;
   }, [items, searchQuery, sortBy, sortOrder]);
+
+  const totalPages = Math.ceil(processedItems.length / ITEMS_PER_PAGE);
+  const paginatedItems = processedItems.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
   if (loading) {
     return (
@@ -281,11 +313,78 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
 
   return (
     <div className="flex flex-col gap-8 max-w-5xl mx-auto px-4 md:px-0 pb-12">
-      <AnimatePresence>
-        {processedItems.map((item, index) => (
-          <HistoryCard key={item.id} item={item} index={index} />
-        ))}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentPage}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col gap-8"
+        >
+          {paginatedItems.map((item, index) => (
+            <HistoryCard key={item.id} item={item} index={index} />
+          ))}
+        </motion.div>
       </AnimatePresence>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-8 py-6">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-slate-200 transition-all shadow-sm"
+          >
+            <ChevronLeft size={20} />
+          </button>
+
+          <div className="flex items-center gap-1 bg-white border border-slate-100 p-1 rounded-2xl shadow-sm">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              // Only show first, last, and pages around current
+              if (
+                page === 1 ||
+                page === totalPages ||
+                (page >= currentPage - 1 && page <= currentPage + 1)
+              ) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                      currentPage === page
+                        ? "bg-slate-900 text-white shadow-lg shadow-slate-900/10"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              } else if (
+                (page === 2 && currentPage > 3) ||
+                (page === totalPages - 1 && currentPage < totalPages - 2)
+              ) {
+                return (
+                  <span
+                    key={page}
+                    className="w-10 h-10 flex items-center justify-center text-slate-300"
+                  >
+                    ...
+                  </span>
+                );
+              }
+              return null;
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-50 hover:border-slate-200 transition-all shadow-sm"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
