@@ -138,40 +138,127 @@ StyLens/
 
 ## 🚀 Installation Guide
 
-### Prerequisites
+This guide covers setting up the project from scratch. If you are starting on a brand-new machine, please follow every step carefully.
 
-- [Node.js](https://nodejs.org/) (v20+)
-- [Python](https://www.python.org/) (v3.12+)
-- [pnpm](https://pnpm.io/)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (optional for local DB)
+### Step 1: Install System Prerequisites
 
-### 1. Clone the repository
+Before downloading the code, you need a few essential tools installed on your computer.
+
+1. **Git**: Used for downloading the codebase.
+   - **Windows**: Download from [git-scm.com](https://git-scm.com/download/win) and run the installer.
+   - **Mac**: Open Terminal and run `xcode-select --install`.
+   - **Linux**: Run `sudo apt install git` (Ubuntu/Debian).
+
+2. **Node.js**: Required to run the frontend application.
+   - Download the **LTS version** (v20 or higher) from [nodejs.org](https://nodejs.org/).
+   - Run the installer and accept the default settings.
+   - Verify installation: Open a terminal and run `node -v`.
+
+3. **Python**: Required to run the backend API.
+   - Download **Python 3.12 or newer** from [python.org](https://www.python.org/downloads/).
+   - **Windows Important**: During installation, make sure to check the box that says **"Add Python to PATH"** before clicking Install.
+   - Verify installation: Open a terminal and run `python --version` (or `python3 --version` on Mac/Linux).
+
+4. **pnpm**: The package manager we use instead of standard `npm`.
+   - Open a terminal and run: `npm install -g pnpm`
+   - Verify installation: `pnpm -v`
+
+### Step 2: Clone the Repository
+
+Download the codebase to your local machine. Open your terminal or command prompt and run:
 
 ```bash
 git clone https://github.com/your-username/StyLens.git
 cd StyLens
 ```
 
-### 2. Install dependencies
+### Step 3: Install Frontend Dependencies
+
+From the root of the `StyLens` folder, install the Node.js packages for the workspace:
 
 ```bash
 pnpm install
 ```
 
-### 3. Setup Environment Variables
+### Step 4: Set Up the Python Backend Environment
 
-Create `.env` files in both `apps/frontend` and `apps/backend` based on the provided `.env.example` files.
+You need to create a dedicated Python "virtual environment" for the backend dependencies.
 
-### 4. Start Development Servers
+1. Navigate to the backend folder:
+   ```bash
+   cd apps/backend
+   ```
+2. Create a virtual environment named `venv`:
+   ```bash
+   python -m venv venv
+   ```
+   *(Note: Use `python3` on Mac/Linux)*
+3. Activate the virtual environment:
+   - **Windows**:
+     ```cmd
+     venv\Scripts\activate
+     ```
+   - **Mac/Linux**:
+     ```bash
+     source venv/bin/activate
+     ```
+4. Install backend dependencies (make sure `venv` is activated):
+   ```bash
+   pip install -e ".[dev]"
+   ```
+5. Return to the root folder:
+   ```bash
+   cd ../..
+   ```
 
-From the root directory:
+### Step 5: Setup Environment Variables
 
-```bash
-pnpm run dev
-```
+The project requires specific API keys to function. You will need to create two environment files.
 
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8000`
+1. **Backend Configuration**:
+   - Navigate to `apps/backend/`.
+   - Copy `.env.example` and rename it to `.env`.
+   - Fill in your API keys:
+     - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`: Get these from your [Supabase Project Dashboard](https://supabase.com/).
+     - `GEMINI_API_KEY`: Get this from [Google AI Studio](https://aistudio.google.com/).
+     - `WEATHER_API_KEY`: Get this from [OpenWeatherMap](https://openweathermap.org/api).
+
+2. **Frontend Configuration**:
+   - Navigate to `apps/frontend/`.
+   - Copy the example `.env` file (if available) and name it `.env.local`.
+   - Provide the required keys:
+     - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase project.
+
+### Step 6: Start the Development Servers
+
+You need **two terminal windows** to run the frontend and backend simultaneously.
+
+**Terminal 1 (Backend):**
+1. Open a terminal and navigate to the backend folder:
+   ```bash
+   cd StyLens/apps/backend
+   ```
+2. Activate your virtual environment:
+   - **Windows**: `venv\Scripts\activate`
+   - **Mac/Linux**: `source venv/bin/activate`
+3. Start the backend server:
+   ```bash
+   pnpm run dev
+   ```
+   *(The backend API will run at `http://localhost:8000`)*
+
+**Terminal 2 (Frontend):**
+1. Open a new terminal and navigate to the frontend folder:
+   ```bash
+   cd StyLens/apps/frontend
+   ```
+2. Start the frontend server:
+   ```bash
+   pnpm run dev
+   ```
+   *(The Next.js website will run at `http://localhost:3000`)*
+
+You can now open `http://localhost:3000` in your web browser to use StyLens!
 
 ---
 
