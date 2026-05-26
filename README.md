@@ -138,80 +138,21 @@ StyLens/
 
 ## 🚀 Installation Guide
 
-This guide covers setting up the project from scratch. If you are starting on a brand-new machine, please follow every step carefully.
+This project is fully Dockerized for a seamless setup experience. You do **not** need to install Python, Node.js, or pnpm on your local machine.
 
-### Step 1: Install System Prerequisites
+### Step 1: Install Prerequisites
 
-Before downloading the code, you need a few essential tools installed on your computer.
-
-1. **Git**: Used for downloading the codebase.
-   - **Windows**: Download from [git-scm.com](https://git-scm.com/download/win) and run the installer.
-   - **Mac**: Open Terminal and run `xcode-select --install`.
-   - **Linux**: Run `sudo apt install git` (Ubuntu/Debian).
-
-2. **Node.js**: Required to run the frontend application.
-   - Download the **LTS version** (v20 or higher) from [nodejs.org](https://nodejs.org/).
-   - Run the installer and accept the default settings.
-   - Verify installation: Open a terminal and run `node -v`.
-
-3. **Python**: Required to run the backend API.
-   - Download **Python 3.12 or newer** from [python.org](https://www.python.org/downloads/).
-   - **Windows Important**: During installation, make sure to check the box that says **"Add Python to PATH"** before clicking Install.
-   - Verify installation: Open a terminal and run `python --version` (or `python3 --version` on Mac/Linux).
-
-4. **pnpm**: The package manager we use instead of standard `npm`.
-   - Open a terminal and run: `npm install -g pnpm`
-   - Verify installation: `pnpm -v`
+1. **Docker Desktop**: Download and install from [docker.com](https://www.docker.com/products/docker-desktop).
+2. **Git**: Download and install from [git-scm.com](https://git-scm.com/).
 
 ### Step 2: Clone the Repository
-
-Download the codebase to your local machine. Open your terminal or command prompt and run:
 
 ```bash
 git clone https://github.com/your-username/StyLens.git
 cd StyLens
 ```
 
-### Step 3: Install Frontend Dependencies
-
-From the root of the `StyLens` folder, install the Node.js packages for the workspace:
-
-```bash
-pnpm install
-```
-
-### Step 4: Set Up the Python Backend Environment
-
-You need to create a dedicated Python "virtual environment" for the backend dependencies.
-
-1. Navigate to the backend folder:
-   ```bash
-   cd apps/backend
-   ```
-2. Create a virtual environment named `venv`:
-   ```bash
-   python -m venv venv
-   ```
-   *(Note: Use `python3` on Mac/Linux)*
-3. Activate the virtual environment:
-   - **Windows**:
-     ```cmd
-     venv\Scripts\activate
-     ```
-   - **Mac/Linux**:
-     ```bash
-     source venv/bin/activate
-     ```
-4. Install backend dependencies (make sure `venv` is activated):
-   ```bash
-   pip install -e ".[dev]"
-   ```
-5. Return to the root folder:
-   ```bash
-   cd ../..
-   ```
-
-### Step 5: Setup Environment Variables
+### Step 3: Setup Environment Variables
 
 The project requires specific API keys to function. You will need to create two environment files.
 
@@ -229,36 +170,20 @@ The project requires specific API keys to function. You will need to create two 
    - Provide the required keys:
      - `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` from your Supabase project.
 
-### Step 6: Start the Development Servers
+### Step 4: Start the Application
 
-You need **two terminal windows** to run the frontend and backend simultaneously.
+From the root of the project (`StyLens/`), run:
 
-**Terminal 1 (Backend):**
-1. Open a terminal and navigate to the backend folder:
-   ```bash
-   cd StyLens/apps/backend
-   ```
-2. Activate your virtual environment:
-   - **Windows**: `venv\Scripts\activate`
-   - **Mac/Linux**: `source venv/bin/activate`
-3. Start the backend server:
-   ```bash
-   pnpm run dev
-   ```
-   *(The backend API will run at `http://localhost:8000`)*
+```bash
+docker compose up --build
+```
 
-**Terminal 2 (Frontend):**
-1. Open a new terminal and navigate to the frontend folder:
-   ```bash
-   cd StyLens/apps/frontend
-   ```
-2. Start the frontend server:
-   ```bash
-   pnpm run dev
-   ```
-   *(The Next.js website will run at `http://localhost:3000`)*
+This command will automatically download all necessary dependencies for both the frontend and backend, build the containers, and start the development servers.
 
-You can now open `http://localhost:3000` in your web browser to use StyLens!
+- **Frontend**: Available at `http://localhost:3000`
+- **Backend API**: Available at `http://localhost:8000`
+
+*Note: The source code directories are mounted as volumes, which means you can edit code on your host machine, and the changes will automatically hot-reload inside the containers!*
 
 ---
 
