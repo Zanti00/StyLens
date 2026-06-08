@@ -15,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { HistoryCardSkeleton } from "./HistoryCardSkeleton";
+import { ConfirmModal } from "../ui/ConfirmModal";
 
 // --- Sub-components ---
 
@@ -92,9 +93,6 @@ const HistoryContent: React.FC<{
         <button className="text-sm font-bold text-slate-900 flex items-center gap-1.5 hover:gap-2.5 transition-all duration-300">
           View Details <ArrowRight size={16} />
         </button>
-        <button className="text-slate-300 hover:text-red-500 transition-colors ml-auto p-2">
-          <Trash2 size={18} />
-        </button>
       </div>
     </div>
   );
@@ -119,30 +117,51 @@ const HistoryRating: React.FC<{ score: number | string }> = ({ score }) => (
   </div>
 );
 
-const HistoryCard: React.FC<{ item: any; index: number }> = ({
-  item,
-  index,
-}) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.1 }}
-  >
-    <Link
-      href={`/history/${item.id}`}
-      className="glass-card group flex flex-col md:flex-row overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500"
+const HistoryCard: React.FC<{
+  item: any;
+  index: number;
+  onDelete: (id: string) => void;
+  deletingId: string | null;
+}> = ({ item, index, onDelete, deletingId }) => {
+  const isDeleting = deletingId === item.id;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
     >
-      <HistoryImage src={item.image_url} />
-      <HistoryContent
-        title={item.title || "Style Analysis"}
-        analysis={item.overall_summary}
-        date={item.created_at}
-        preference={item.style_preference}
-      />
-      <HistoryRating score={item.rating || "0.0"} />
-    </Link>
-  </motion.div>
-);
+      <Link
+        href={`/history/${item.id}`}
+        className="glass-card group flex flex-col md:flex-row overflow-hidden hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500"
+      >
+        <HistoryImage src={item.image_url} />
+        <HistoryContent
+          title={item.title || "Style Analysis"}
+          analysis={item.overall_summary}
+          date={item.created_at}
+          preference={item.style_preference}
+        />
+        <HistoryRating score={item.rating || "0.0"} />
+        <button
+          type="button"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onDelete(item.id);
+          }}
+          disabled={isDeleting}
+          title={isDeleting ? "Deleting..." : "Delete this analysis"}
+          className={`text-slate-300 hover:text-red-500 transition-colors ml-auto p-2 ${
+            isDeleting ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+        >
+          <Trash2 size={18} />
+        </button>
+      </Link>
+    </motion.div>
+  );
+};
 
 // --- Main Component ---
 
@@ -160,6 +179,8 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -182,6 +203,30 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
       setError(err.message || "Failed to load history");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = (analysisId: string) => {
+    setDeleteConfirmationId(analysisId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmationId) return;
+    const analysisId = deleteConfirmationId;
+
+    setDeletingId(analysisId);
+    try {
+      await analysisApi.deleteAnalysis(analysisId);
+      setItems((prevItems) =>
+        prevItems.filter((item) => item.id !== analysisId),
+      );
+      setError(null);
+      setDeleteConfirmationId(null);
+    } catch (err: any) {
+      console.error("Failed to delete analysis:", err);
+      setError(err.message || "Failed to delete analysis");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -231,6 +276,12 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   );
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   if (loading) {
     return (
@@ -323,7 +374,13 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
           className="flex flex-col gap-8"
         >
           {paginatedItems.map((item, index) => (
-            <HistoryCard key={item.id} item={item} index={index} />
+            <HistoryCard
+              key={item.id}
+              item={item}
+              index={index}
+              onDelete={handleDelete}
+              deletingId={deletingId}
+            />
           ))}
         </motion.div>
       </AnimatePresence>
@@ -385,6 +442,17 @@ export const AnalysisHistory: React.FC<AnalysisHistoryProps> = ({
           </button>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteConfirmationId !== null}
+        onClose={() => setDeleteConfirmationId(null)}
+        onConfirm={confirmDelete}
+        title="Delete Analysis"
+        message="Delete this analysis permanently? This action cannot be undone."
+        confirmText="Delete"
+        type="danger"
+        isLoading={deletingId !== null}
+      />
     </div>
   );
 };

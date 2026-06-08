@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { getAuthenticatedUser } from "@/services/auth.service";
-import {
-  LogOut,
-  User as UserIcon,
-} from "lucide-react";
+import { LogOut, User as UserIcon } from "lucide-react";
 import { Navigation } from "@/components/layout/Navigation";
 
 const inter = Inter({
@@ -49,9 +46,7 @@ export default async function RootLayout({
               </a>
             </div>
 
-            <div className="flex justify-center">
-              {user && <Navigation />}
-            </div>
+            <div className="flex justify-center">{user && <Navigation />}</div>
 
             <div className="flex justify-end items-center gap-4 md:gap-10">
               {user ? (
@@ -62,7 +57,7 @@ export default async function RootLayout({
                       <UserIcon size={18} />
                     </div>
                     <span className="text-sm font-bold text-slate-600 hidden xl:inline">
-                      {user.email}
+                      {user.fullname}
                     </span>
                     <form action="/auth/signout" method="post">
                       <button
@@ -107,17 +102,6 @@ export default async function RootLayout({
             </div>
             <div className="text-sm text-slate-400 font-medium">
               © {new Date().getFullYear()} StyLens. Crafted for style.
-            </div>
-            <div className="flex items-center gap-8 text-sm font-bold text-slate-400">
-              <a href="#" className="hover:text-slate-900 transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="hover:text-slate-900 transition-colors">
-                Terms
-              </a>
-              <a href="#" className="hover:text-slate-900 transition-colors">
-                Contact
-              </a>
             </div>
           </div>
         </footer>

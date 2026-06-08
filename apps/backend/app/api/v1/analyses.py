@@ -185,6 +185,21 @@ async def get_analysis(
         "error": None
     }
 
+@router.delete("/{analysis_id}", response_model=ApiResponse)
+async def delete_analysis(
+    analysis_id: str,
+    user: dict = Depends(get_current_user)
+):
+    deleted = await analysis_repo.delete_analysis(analysis_id, user["id"])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    return {
+        "success": True,
+        "data": {"deleted": True},
+        "error": None
+    }
+
 @router.get("/stats/usage", response_model=ApiResponse)
 async def get_usage_stats(user: dict = Depends(get_current_user)):
     """

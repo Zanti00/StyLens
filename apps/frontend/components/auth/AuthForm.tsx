@@ -2,13 +2,14 @@
 
 import React, { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Mail, Lock, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { Mail, Lock, Loader2, Sparkles, AlertCircle, User } from "lucide-react";
 
 interface AuthFormProps {
   mode: "login" | "signup" | "forgot-password" | "reset-password";
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
           email,
           password,
           options: {
+            data: { full_name: fullName },
             emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
@@ -149,6 +151,28 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode }) => {
         )}
 
         <div className="space-y-4">
+          {mode === "signup" && (
+            <div className="relative">
+              <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">
+                Full Name
+              </label>
+              <div className="relative">
+                <User
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 z-10"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Jane Doe"
+                  className="glass-input w-full pl-12"
+                />
+              </div>
+            </div>
+          )}
+
           {mode !== "reset-password" && (
             <div className="relative">
               <label className="text-sm font-semibold text-slate-700 ml-1 mb-1.5 block">
